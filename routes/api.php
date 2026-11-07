@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApiSessionController;
 use App\Http\Controllers\AvatarController;
+use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\FacePhotoController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\ProfileController;
@@ -19,6 +20,14 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/register', [RegistrationController::class, 'store'])->middleware('throttle:6,1');
     Route::post('auth/login', [ApiSessionController::class, 'store'])->middleware('throttle:6,1');
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('feed', [CommunityController::class, 'index']);
+        Route::post('feed', [CommunityController::class, 'store'])->middleware(['can:posts.create', 'throttle:6,1']);
+        Route::get('feed/{post}/comments', [CommunityController::class, 'comments']);
+        Route::post('feed/{post}/comments', [CommunityController::class, 'comment'])->middleware(['can:posts.create', 'throttle:20,1']);
+        Route::put('feed/{post}/reaction', [CommunityController::class, 'reaction'])->middleware('throttle:60,1');
+        Route::put('feed/{post}/bookmark', [CommunityController::class, 'bookmark'])->middleware('throttle:60,1');
+        Route::patch('feed/{post}', [CommunityController::class, 'state']);
+        Route::delete('feed/{post}', [CommunityController::class, 'destroy']);
         Route::get('profile/avatar', [AvatarController::class, 'show']);
         Route::post('profile/avatar', [AvatarController::class, 'update'])->middleware(['can:profile.update', 'throttle:6,1']);
         Route::get('profile', [ProfileController::class, 'show']);

@@ -5,7 +5,10 @@ import {
   ref,
   shallowRef,
   type InjectionKey,
+  onMounted,
 } from 'vue'
+import { api } from '../services/api'
+import { currentUser } from './useAuth'
 
 export interface Comment {
   id: string
@@ -17,6 +20,11 @@ export interface Comment {
 
 export interface Post {
   id: string
+  kind: string
+  status: string
+  owned: boolean
+  tags: string[]
+  comments_count: number
   author: string
   avatar: string
   neighborhood: string
@@ -75,81 +83,187 @@ export const activities: Activity[] = [
   },
 ]
 
+export const postKinds = [
+  { value: 'need_help', label: 'Necesito ayuda' },
+  { value: 'offer_help', label: 'Ofrezco ayuda' },
+  { value: 'collaboration', label: 'Colaboración' },
+  { value: 'initiative', label: 'Iniciativa vecinal' },
+  { value: 'activity', label: 'Actividad comunitaria' },
+  { value: 'alert', label: 'Alerta vecinal' },
+]
 function createCommunity() {
-  const neighborhood = shallowRef('San Blas')
-  const posts = ref<Post[]>([
-    {
-      id: 'welcome-miguel',
-      author: 'Miguel',
-      avatar: '/images/miguel.jpg',
-      neighborhood: 'San Blas',
-      time: 'Hace 2 h',
-      isWelcome: true,
-      paragraphs: [
-        '¡Hola, vecinos!',
-        'Mi esposa y yo acabamos de mudarnos a San Blas. Estamos arreglando nuestra casita y nos encantaría conocerlos. Si nos ven por el barrio, ¡pasen a saludar!',
-      ],
-      welcomed: true,
-      reactions: 7,
-      saved: false,
-      comments: [
-        {
-          id: 'lucia-welcome',
-          author: 'Lucía',
-          avatar: '/images/lucia.jpg',
-          text: '¡Bienvenidos al barrio, Miguel! Qué lindo tenerlos por aquí.',
-          time: 'Hace 1 h',
-        },
-      ],
-    },
-  ])
-  const visiblePosts = computed(() =>
-    posts.value.filter((post) => post.neighborhood === neighborhood.value),
+  const neighborhood = shallowRef(
+    currentUser.value?.neighborhood || 'Tu comunidad',
   )
-
-  function toggleWelcome(id: string) {
-    const post = posts.value.find((item) => item.id === id)
+  const posts = ref<Post[]>([])
+  const visiblePosts = computed(() => posts.value)
+  const loading = ref(false),
+    error = ref(''),
+    kind = ref(''),
+    savedOnly = ref(false)
+  const nextCursor = ref<string | null>(null)
+  const pending = new Set<string>()
+  let generation = 0
+  function fail(e: unknown) {
+    error.value =
+      e instanceof Error ? e.message : 'No pudimos completar la solicitud.'
+  }
+  async function loadPosts(more = false) {
+    if (more && (loading.value || !nextCursor.value)) return
+    const current = ++generation
+    loading.value = true
+    error.value = ''
+    const query = new URLSearchParams()
+    if (kind.value) query.set('kind', kind.value)
+    if (savedOnly.value) query.set('saved', '1')
+    if (more && nextCursor.value) query.set('cursor', nextCursor.value)
+    try {
+      const response = await api<{
+        data: Post[]
+        next_cursor: string | null
+      }>(`/feed?${query}`)
+      if (current !== generation) return
+      posts.value = more
+        ? [
+            ...posts.value,
+            ...response.data.filter(
+              (p) => !posts.value.some((old) => old.id === p.id),
+            ),
+          ]
+        : response.data
+      nextCursor.value = response.next_cursor
+    } catch (e) {
+      if (current === generation) fail(e)
+    } finally {
+      if (current === generation) loading.value = false
+    }
+  }
+  async function loadComments(id: string) {
+    const post = posts.value.find((p) => p.id === id)
     if (!post) return
-    post.welcomed = !post.welcomed
-    post.reactions += post.welcomed ? 1 : -1
+    try {
+      const response = await api<{
+        data: Comment[]
+        next_cursor: string | null
+      }>(`/feed/${id}/comments`)
+      post.comments = response.data.slice().reverse()
+      commentCursors.value[id] = response.next_cursor
+    } catch (e) {
+      fail(e)
+    }
   }
-
-  function addComment(id: string, text: string) {
-    const post = posts.value.find((item) => item.id === id)
-    if (!post || !text.trim()) return
-    post.comments.push({
-      id: crypto.randomUUID(),
-      author: 'Tú',
-      avatar: '/images/ana.jpg',
-      text: text.trim(),
-      time: 'Ahora',
+  const commentCursors = ref<Record<string, string | null>>({})
+  async function moreComments(id: string) {
+    const cursor = commentCursors.value[id],
+      post = posts.value.find((p) => p.id === id)
+    if (!cursor || !post || pending.has('comments' + id)) return
+    pending.add('comments' + id)
+    try {
+      const response = await api<{
+        data: Comment[]
+        next_cursor: string | null
+      }>(`/feed/${id}/comments?cursor=${encodeURIComponent(cursor)}`)
+      post.comments = [...response.data.reverse(), ...post.comments]
+      commentCursors.value[id] = response.next_cursor
+    } catch (e) {
+      fail(e)
+    } finally {
+      pending.delete('comments' + id)
+    }
+  }
+  async function selection(id: string, action: 'reaction' | 'bookmark') {
+    const post = posts.value.find((p) => p.id === id),
+      key = action + id
+    if (!post || pending.has(key)) return
+    pending.add(key)
+    error.value = ''
+    try {
+      const response = await api<{ data: Post }>(`/feed/${id}/${action}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          selected: action === 'reaction' ? !post.welcomed : !post.saved,
+        }),
+      })
+      Object.assign(post, { ...response.data, comments: post.comments })
+    } catch (e) {
+      fail(e)
+    } finally {
+      pending.delete(key)
+    }
+  }
+  async function addComment(
+    id: string,
+    text: string,
+    done?: (success: boolean) => void,
+  ) {
+    try {
+      await api(`/feed/${id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ body: text }),
+      })
+      await loadComments(id)
+      const p = posts.value.find((p) => p.id === id)
+      if (p) p.comments_count++
+      done?.(true)
+    } catch (e) {
+      fail(e)
+      done?.(false)
+    }
+  }
+  async function addPost(text: string, type: string) {
+    await api('/feed', {
+      method: 'POST',
+      body: JSON.stringify({ body: text, kind: type }),
     })
+    kind.value = ''
+    savedOnly.value = false
+    await loadPosts()
   }
-
-  function addPost(text: string) {
-    if (!text.trim()) return
-    posts.value.unshift({
-      id: crypto.randomUUID(),
-      author: 'Tú',
-      avatar: '/images/ana.jpg',
-      neighborhood: neighborhood.value,
-      time: 'Ahora',
-      isWelcome: false,
-      paragraphs: text.trim().split('\n').filter(Boolean),
-      welcomed: false,
-      reactions: 0,
-      saved: false,
-      comments: [],
-    })
+  async function resolve(id: string) {
+    const post = posts.value.find((p) => p.id === id)
+    if (!post) return
+    try {
+      const response = await api<{ data: Post }>(`/feed/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: post.status === 'open' ? 'resolved' : 'open',
+        }),
+      })
+      Object.assign(post, { ...response.data, comments: post.comments })
+    } catch (e) {
+      fail(e)
+    }
   }
-
+  async function remove(id: string) {
+    try {
+      await api(`/feed/${id}`, { method: 'DELETE' })
+      posts.value = posts.value.filter((p) => p.id !== id)
+    } catch (e) {
+      fail(e)
+    }
+  }
+  onMounted(() => {
+    void loadPosts()
+  })
   return {
     neighborhood,
     posts,
     visiblePosts,
-    toggleWelcome,
+    loading,
+    error,
+    kind,
+    savedOnly,
+    nextCursor,
+    loadPosts,
+    loadComments,
+    moreComments,
+    commentCursors,
+    toggleWelcome: (id: string) => selection(id, 'reaction'),
+    toggleSave: (id: string) => selection(id, 'bookmark'),
     addComment,
     addPost,
+    resolve,
+    remove,
   }
 }
 

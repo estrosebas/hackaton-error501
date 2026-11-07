@@ -76,7 +76,24 @@ Las rutas previas `/api/auth/*` conservan sesiones/CSRF y comparten la validaci�
 
 UBIGEO procede de [RitchieRD/ubigeos-peru-data](https://github.com/RitchieRD/ubigeos-peru-data), revisión fija `23cd3666b19f32bccdf36d90243c2a4462d6202c`, CC0. Los archivos originales, licencia y versión están en `database/data/ubigeo`; `catalog.json` normaliza las claves. Es un catálogo comunitario, no un padrón oficial certificado.
 
-## Preparación
+## Feed comunitario
+
+Todas las rutas requieren Sanctum y operan únicamente dentro del UBIGEO del usuario autenticado:
+
+| Método | Ruta bajo `/api/v1` | Función |
+| --- | --- | --- |
+| GET | `/feed?kind=need_help&saved=1&cursor=...` | Lista paginada, diez publicaciones por página; filtros opcionales |
+| POST | `/feed` | Crear con `body` (máximo 2000 caracteres) y `kind` |
+| GET | `/feed/{post}/comments?cursor=...` | Comentarios paginados, veinte por página |
+| POST | `/feed/{post}/comments` | Comentar con `body` (máximo 500 caracteres) |
+| PUT | `/feed/{post}/reaction` | Establecer reacción con `selected: boolean` |
+| PUT | `/feed/{post}/bookmark` | Establecer guardado con `selected: boolean` |
+| PATCH | `/feed/{post}` | Propietario establece `status: open` o `resolved` |
+| DELETE | `/feed/{post}` | Propietario o moderador retira la publicación |
+
+Categorías: `need_help`, `offer_help`, `collaboration`, `initiative`, `activity`, `alert`. Las listas devuelven `data` y `next_cursor`; las modificaciones devuelven `data`, salvo comentarios (mensaje) y eliminación (204). No se exponen DNI, coordenadas ni fotos biométricas. Las reacciones y guardados son idempotentes. El servidor extrae hasta cinco hashtags del texto mediante Spatie Tags.
+
+## Instalación y verificación
 
 ```powershell
 composer install

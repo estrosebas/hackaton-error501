@@ -19,13 +19,27 @@ const kind = computed(() =>
 )
 
 function changeKind(value: string) {
-  router.replace({ name: value === 'producto' ? 'create-product' : 'create' })
+  router.replace({
+    name: value === 'producto' ? 'create-product' : 'create',
+  })
 }
 
-function publishPost(text: string) {
-  addPost(text)
-  message.success('Tu publicación ya está en el muro')
-  router.push({ name: 'home' })
+async function publishPost(text: string, type: string) {
+  if (saving.value) return
+  saving.value = true
+  error.value = ''
+  try {
+    await addPost(text, type)
+    message.success('Tu publicación ya está en la comunidad')
+    await router.push({ name: 'home' })
+  } catch (e) {
+    error.value =
+      e instanceof Error
+        ? e.message
+        : 'No pudimos publicar. Tu texto se conserva para reintentar.'
+  } finally {
+    saving.value = false
+  }
 }
 
 async function publishProduct(listing: NewListing) {
@@ -57,6 +71,8 @@ async function publishProduct(listing: NewListing) {
       ><NTabPane name="publicacion" tab="Al barrio"
         ><PostComposer
           :neighborhood="neighborhood"
+          :saving="saving"
+          :error="error"
           @publish="publishPost" /></NTabPane
       ><NTabPane name="producto" tab="Vender algo"
         ><ProductForm

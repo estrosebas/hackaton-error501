@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { currentUser } from '../../composables/useAuth'
 import {
   NAvatar,
   NButton,
@@ -30,7 +31,9 @@ const emit = defineEmits<{
   selectActivity: [activity: Activity]
   toggleInterest: [id: string]
 }>()
-const neighborhoodOptions = ['San Blas', 'San Cristóbal', 'Santa Ana']
+const neighborhoodOptions = computed(() => [
+  currentUser.value?.neighborhood || 'Tu comunidad',
+])
 const titles: Record<Panel, string> = {
   messages: 'Tus conversaciones',
   notifications: 'Lo que pasa cerquita',
@@ -71,7 +74,9 @@ function selectNeighborhood(neighborhood: string) {
       body-content-style="padding-bottom: max(24px, env(safe-area-inset-bottom));"
     >
       <div v-if="panel === 'neighborhood'" class="sheet-list">
-        <p class="sheet-hint">Elige la comunidad que quieres ver.</p>
+        <p class="sheet-hint">
+          Las publicaciones se limitan a tu distrito de registro.
+        </p>
         <button
           v-for="option in neighborhoodOptions"
           :key="option"
@@ -80,7 +85,7 @@ function selectNeighborhood(neighborhood: string) {
           @click="selectNeighborhood(option)"
         >
           <AppIcon name="pin" /><span
-            >{{ option }}<small>Cusco, Perú</small></span
+            >{{ option }}<small>Tu zona de registro</small></span
           ><AppIcon v-if="neighborhood === option" name="check" />
         </button>
       </div>
@@ -164,7 +169,8 @@ function selectNeighborhood(neighborhood: string) {
         <h3>{{ selectedActivity.title }}</h3>
         <p>{{ selectedActivity.description }}</p>
         <div class="detail-meta">
-          <AppIcon name="calendar" :size="18" />{{ selectedActivity.date }} ·
+          <AppIcon name="calendar" :size="18" />{{ selectedActivity.date }}
+          ·
           {{ selectedActivity.time }}
         </div>
         <div class="detail-meta">

@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { shallowRef, useTemplateRef, nextTick } from 'vue'
 import { NAvatar, NButton, NDropdown, NInput, type InputInst } from 'naive-ui'
-import type { Post } from '../../composables/useCommunity'
+import { postKinds, type Post } from '../../composables/useCommunity'
 import AppIcon from '../AppIcon.vue'
 
-const props = defineProps<{ post: Post }>()
+const props = defineProps<{ post: Post; hasMoreComments: boolean }>()
 const emit = defineEmits<{
   welcome: [id: string]
-  comment: [id: string, text: string]
+  comment: [id: string, text: string, done: (success: boolean) => void]
+  loadComments: [id: string]
+  moreComments: [id: string]
+  resolve: [id: string]
+  remove: [id: string]
   save: [id: string]
 }>()
 const composing = shallowRef(false)
 const draft = shallowRef('')
+const sending = shallowRef(false)
 const input = useTemplateRef<InputInst>('comment-input')
 
 async function openComment() {
   composing.value = !composing.value
   if (composing.value) {
+    emit('loadComments', props.post.id)
     await nextTick()
     input.value?.focus()
   }
@@ -24,9 +30,15 @@ async function openComment() {
 
 function submitComment() {
   if (!draft.value.trim()) return
-  emit('comment', props.post.id, draft.value)
-  draft.value = ''
-  composing.value = false
+  if (sending.value) return
+  sending.value = true
+  emit('comment', props.post.id, draft.value, (success) => {
+    sending.value = false
+    if (success) {
+      draft.value = ''
+      composing.value = false
+    }
+  })
 }
 </script>
 
@@ -39,7 +51,7 @@ function submitComment() {
         :src="post.avatar"
         :img-props="{ alt: '' }"
         class="neighbor-avatar"
-      />
+      >{{ post.author.charAt(0) }}</NAvatar>
       <div class="post-author">
         <p>
           <strong>{{ post.author }}</strong
@@ -73,10 +85,20 @@ function submitComment() {
         /></NButton>
       </NDropdown>
     </header>
+    <p style="margin: 12px 16px; color: var(--lavender); font-weight: 800">
+      {{ postKinds.find((item) => item.value === post.kind)?.label }}
+      <span v-if="post.status === 'resolved'">· Atendido / finalizado</span>
+    </p>
     <div class="post-copy">
       <p v-for="(paragraph, index) in post.paragraphs" :key="index">
         {{ paragraph }}
       </p>
+    </div>
+    <div v-if="post.owned" style="display: flex; gap: 8px; padding: 0 16px">
+      <NButton size="small" @click="emit('resolve', post.id)">{{
+        post.status === 'open' ? 'Marcar como atendido' : 'Reabrir'
+      }}</NButton
+      ><NButton size="small" @click="emit('remove', post.id)">Retirar</NButton>
     </div>
     <div class="post-actions">
       <NButton
@@ -94,21 +116,26 @@ function submitComment() {
       </NButton>
     </div>
     <div v-if="post.reactions > 0" class="reaction-summary">
-      <div class="reaction-faces">
-        <img src="/images/lucia.jpg" alt="" width="22" height="22" /><img
-          src="/images/ana.jpg"
-          alt=""
-          width="22"
-          height="22"
-        /><span><AppIcon name="smile" :size="13" /></span>
-      </div>
-      <span
+      <span v-if="post.welcomed && post.reactions === 1">Te gusta esta publicación</span>
+      <span v-else
         >{{ post.welcomed ? 'Tú y ' : ''
         }}{{ post.reactions - (post.welcomed ? 1 : 0) }}
         {{ post.welcomed ? 'vecinos más' : 'vecinos' }}
         {{ post.isWelcome ? 'le dieron la bienvenida' : 'reaccionaron' }}</span
       >
     </div>
+    <NButton
+      v-if="post.comments_count && !post.comments.length"
+      quaternary
+      @click="emit('loadComments', post.id)"
+      >Ver {{ post.comments_count }} comentarios</NButton
+    >
+    <NButton
+      v-if="hasMoreComments"
+      quaternary
+      @click="emit('moreComments', post.id)"
+      >Ver comentarios anteriores</NButton
+    >
     <div v-if="post.comments.length" class="comments">
       <div v-for="comment in post.comments" :key="comment.id" class="comment">
         <NAvatar
@@ -117,7 +144,7 @@ function submitComment() {
           :src="comment.avatar"
           :img-props="{ alt: '' }"
           class="neighbor-avatar"
-        />
+        >{{ comment.author.charAt(0) }}</NAvatar>
         <div class="comment-bubble">
           <div class="comment-byline">
             <strong>{{ comment.author }}</strong
@@ -131,7 +158,7 @@ function submitComment() {
       <NInput
         ref="comment-input"
         v-model:value="draft"
-        placeholder="Escribe algo bonito…"
+        placeholder="Responde o coordina cómo ayudar…"
         :input-props="{ 'aria-label': 'Tu comentario' }"
         :maxlength="500"
       />
@@ -139,7 +166,8 @@ function submitComment() {
         attr-type="submit"
         circle
         type="primary"
-        :disabled="!draft.trim()"
+        :disabled="!draft.trim() || sending"
+        :loading="sending"
         aria-label="Enviar comentario"
         ><AppIcon name="send" :size="18"
       /></NButton>
