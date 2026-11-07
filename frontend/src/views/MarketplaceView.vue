@@ -4,13 +4,14 @@ import { NButton, NEmpty, NInput, NSelect } from 'naive-ui'
 import { RouterLink, useRoute } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import LocalPageHeading from '../components/layout/LocalPageHeading.vue'
+import MarketplaceHighlights from '../components/marketplace/MarketplaceHighlights.vue'
 import ProductCard from '../components/marketplace/ProductCard.vue'
 import type { Panel } from '../components/community/CommunityPanels.vue'
 import { useCommunity } from '../composables/useCommunity'
 import { useMarketplace } from '../composables/useMarketplace'
 
 const { neighborhood } = useCommunity()
-const { listings, favoriteIds } = useMarketplace()
+const { listings, favoriteIds, recentlyViewed } = useMarketplace()
 const route = useRoute()
 const emit = defineEmits<{ openPanel: [panel: Panel] }>()
 const search = shallowRef('')
@@ -66,7 +67,9 @@ const filteredListings = computed(() => {
     )
   })
 })
-const isBrowsing = computed(() => route.name === 'market' && !hasFilters.value)
+const featuredListing = computed(() =>
+  route.name === 'market' && !hasFilters.value ? filteredListings.value[0] : undefined,
+)
 
 function resetFilters() {
   search.value = ''
@@ -121,34 +124,37 @@ function resetFilters() {
         </RouterLink>
       </nav>
     </header>
-    <div class="marketplace-results">
-      <h2 id="market-results-title">{{ isBrowsing ? 'En el barrio' : 'Resultados' }}</h2>
-      <span role="status">
-        {{ filteredListings.length }}
-        {{ filteredListings.length === 1 ? 'anuncio' : 'anuncios' }}
-      </span>
-    </div>
-    <ul v-if="filteredListings.length" class="product-feed" role="list" aria-labelledby="market-results-title">
-      <ProductCard
-        v-for="(listing, index) in filteredListings"
-        :key="listing.id"
-        :listing="listing"
-        :wide="filteredListings.length === 1 || (isBrowsing && index === 0 && filteredListings.length > 2)"
-      />
-    </ul>
-    <div v-else class="empty-market">
-      <NEmpty :description="emptyTitle">
-        <template #extra>
-          <NButton v-if="hasFilters" @click="resetFilters">Limpiar filtros</NButton>
-          <RouterLink v-else-if="showMine" class="marketplace-sell" :to="{ name: 'create-product' }">
-            Publicar un producto
-          </RouterLink>
-          <RouterLink v-else-if="showFavorites" class="text-link" :to="{ name: 'market' }" replace>
-            Ver todos los anuncios <AppIcon name="arrow" :size="15" />
-          </RouterLink>
-        </template>
-      </NEmpty>
-    </div>
+    <MarketplaceHighlights
+      v-if="featuredListing"
+      :featured="featuredListing"
+      :latest="filteredListings.slice(1)"
+      :recent="recentlyViewed"
+    />
+    <template v-else>
+      <div class="marketplace-results">
+        <h2 id="market-results-title">Resultados</h2>
+        <span role="status">
+          {{ filteredListings.length }}
+          {{ filteredListings.length === 1 ? 'anuncio' : 'anuncios' }}
+        </span>
+      </div>
+      <ul v-if="filteredListings.length" class="product-feed" role="list" aria-labelledby="market-results-title">
+        <ProductCard v-for="listing in filteredListings" :key="listing.id" :listing="listing" />
+      </ul>
+      <div v-else class="empty-market">
+        <NEmpty :description="emptyTitle">
+          <template #extra>
+            <NButton v-if="hasFilters" @click="resetFilters">Limpiar filtros</NButton>
+            <RouterLink v-else-if="showMine" class="marketplace-sell" :to="{ name: 'create-product' }">
+              Publicar un producto
+            </RouterLink>
+            <RouterLink v-else-if="showFavorites" class="text-link" :to="{ name: 'market' }" replace>
+              Ver todos los anuncios <AppIcon name="arrow" :size="15" />
+            </RouterLink>
+          </template>
+        </NEmpty>
+      </div>
+    </template>
     <p class="marketplace-demo-note">
       Anuncios de ejemplo · Tus anuncios se guardan en este dispositivo.
     </p>

@@ -30,6 +30,8 @@ export type IconName =
   | 'lock'
   | 'eye'
   | 'eye-off'
+  | 'refresh'
+  | 'heart'
 
 defineProps<{ name: IconName; size?: number }>()
 
@@ -86,6 +88,8 @@ const paths: Record<IconName, string[]> = {
   lock: ['M5 11h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z', 'M8 11V7a4 4 0 0 1 8 0v4'],
   eye: ['M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z', 'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0'],
   'eye-off': ['m3 3 18 18', 'M10.5 6.1c.5-.1 1-.1 1.5-.1 6.4 0 10 6 10 6a16 16 0 0 1-2.5 2.8M6.2 7.8A16 16 0 0 0 2 12s3.6 6 10 6c1.7 0 3.2-.4 4.5-1.1'],
+  refresh: ['M20 7v5h-5', 'M20 12a8 8 0 1 0-2.4 5.7'],
+  heart: ['M20.8 8.6c0 4.2-8.8 10-8.8 10s-8.8-5.8-8.8-10A4.5 4.5 0 0 1 12 7.1a4.5 4.5 0 0 1 8.8 1.5Z'],
 }
 </script>
 

@@ -6,12 +6,13 @@ import {
   NFormItem,
   NInput,
   NInputNumber,
-  NSelect,
   useMessage,
   type FormInst,
   type FormRules,
 } from 'naive-ui'
 import AppIcon from '../AppIcon.vue'
+import AppSelect from '../AppSelect.vue'
+import PhotoPicker from '../PhotoPicker.vue'
 import {
   productCategories,
   productConditions,
@@ -26,7 +27,6 @@ const props = defineProps<{
 const emit = defineEmits<{ publish: [listing: NewListing] }>()
 const message = useMessage()
 const form = useTemplateRef<FormInst>('product-form')
-const photoInput = useTemplateRef<HTMLInputElement>('photo-input')
 const model = reactive({
   title: '',
   price: null as number | null,
@@ -78,12 +78,9 @@ const rules: FormRules = {
   },
 }
 
-async function selectPhoto(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
+async function selectPhoto([file]: File[]) {
+  if (!file || readingPhoto.value || props.saving) return
   photoError.value = ''
-  input.value = ''
   if (
     !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
     file.size > 2 * 1024 * 1024
@@ -108,6 +105,11 @@ async function selectPhoto(event: Event) {
   } finally {
     readingPhoto.value = false
   }
+}
+
+function removePhoto() {
+  model.image = ''
+  photoError.value = ''
 }
 
 async function submit() {
@@ -148,43 +150,19 @@ async function submit() {
     @submit.prevent="submit"
   >
     <div class="photo-field">
-      <input
-        ref="photo-input"
-        class="visually-hidden"
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        aria-label="Foto del producto"
-        tabindex="-1"
-        @change="selectPhoto"
-      />
-      <button
-        class="photo-upload"
-        :class="{ 'has-photo': model.image }"
-        type="button"
-        :disabled="readingPhoto || saving"
-        aria-describedby="photo-help"
-        :aria-invalid="Boolean(photoError)"
-        @click="photoInput?.click()"
+      <PhotoPicker
+        :previews="model.image ? [model.image] : []"
+        input-label="Foto del producto"
+        preview-alt="Vista previa de tu producto"
+        :disabled="saving"
+        :loading="readingPhoto"
+        described-by="photo-help"
+        :invalid="Boolean(photoError)"
+        @select="selectPhoto"
+        @remove="removePhoto"
       >
-        <img
-          v-if="model.image"
-          :src="model.image"
-          alt="Vista previa de tu producto"
-        />
-        <span v-else class="photo-upload-icon"
-          ><AppIcon name="camera" :size="30"
-        /></span>
-        <span class="photo-upload-label">{{
-          readingPhoto
-            ? 'Abriendo foto…'
-            : model.image
-              ? 'Cambiar foto'
-              : 'Agrega una foto del producto'
-        }}</span>
-      </button>
-      <p id="photo-help" class="field-help">
-        Una buena foto ayuda. JPG, PNG o WebP, hasta 2 MB.
-      </p>
+        <span id="photo-help">Foto del producto · JPG, PNG o WebP, hasta 2 MB.</span>
+      </PhotoPicker>
       <p v-if="photoError" role="alert" class="form-error">{{ photoError }}</p>
     </div>
     <NFormItem label="¿Qué vas a vender?" path="title"
@@ -210,19 +188,19 @@ async function submit() {
           ><template #prefix>S/</template></NInputNumber
         ></NFormItem
       ><NFormItem label="Categoría" path="category"
-        ><NSelect
+        ><AppSelect
           v-model:value="model.category"
           :options="categoryOptions"
           placeholder="Seleccionar"
-          aria-label="Categoría del producto"
+          label="Categoría del producto"
       /></NFormItem>
     </div>
     <NFormItem label="Estado del producto" path="condition"
-      ><NSelect
+      ><AppSelect
         v-model:value="model.condition"
         :options="conditionOptions"
         placeholder="¿En qué estado está?"
-        aria-label="Estado del producto"
+        label="Estado del producto"
     /></NFormItem>
     <NFormItem label="Cuéntanos un poco más" path="description"
       ><NInput

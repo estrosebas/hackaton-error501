@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { shallowRef, useTemplateRef, nextTick } from 'vue'
-import { NAvatar, NButton, NDropdown, NInput, type InputInst } from 'naive-ui'
-import { postKinds, type Post } from '../../composables/useCommunity'
+import { computed, nextTick, shallowRef, useTemplateRef } from 'vue'
+import { NAvatar, NDropdown } from 'naive-ui'
+import type { Post } from '../../composables/useCommunity'
 import AppIcon from '../AppIcon.vue'
+import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
+import PostPhotoGallery from './PostPhotoGallery.vue'
+import PostCaption from './PostCaption.vue'
+import PostComments from './PostComments.vue'
 
 const props = defineProps<{ post: Post; hasMoreComments: boolean }>()
 const emit = defineEmits<{
@@ -14,163 +18,251 @@ const emit = defineEmits<{
   remove: [id: string]
   save: [id: string]
 }>()
-const composing = shallowRef(false)
-const draft = shallowRef('')
-const sending = shallowRef(false)
-const input = useTemplateRef<InputInst>('comment-input')
 
-async function openComment() {
-  composing.value = !composing.value
-  if (composing.value) {
-    emit('loadComments', props.post.id)
-    await nextTick()
-    input.value?.focus()
-  }
+const commentsOpen = shallowRef(false)
+const commentsVisited = shallowRef(false)
+const comments = useTemplateRef<InstanceType<typeof PostComments>>('comments')
+const ownerOptions = computed(() => [
+  ...(props.post.kind === 'moment' ? [] : [{
+    label: props.post.status === 'resolved'
+      ? 'Reabrir'
+      : props.post.kind === 'activity' ? 'Marcar como finalizada' : 'Marcar como atendida',
+    key: 'resolve',
+  }]),
+  { label: 'Retirar publicación', key: 'remove' },
+])
+const reactionLabel = computed(() =>
+  props.post.isWelcome ? 'Dar la bienvenida' : 'Me gusta',
+)
+const reactionCount = computed(() =>
+  props.post.isWelcome
+    ? `${props.post.reactions} ${props.post.reactions === 1 ? 'bienvenida' : 'bienvenidas'}`
+    : `${props.post.reactions} Me gusta`,
+)
+
+function selectOwnerAction(action: string) {
+  if (action === 'resolve') emit('resolve', props.post.id)
+  if (action === 'remove') emit('remove', props.post.id)
 }
 
-function submitComment() {
-  if (!draft.value.trim()) return
-  if (sending.value) return
-  sending.value = true
-  emit('comment', props.post.id, draft.value, (success) => {
-    sending.value = false
-    if (success) {
-      draft.value = ''
-      composing.value = false
-    }
-  })
+async function toggleComments(focus: boolean) {
+  commentsOpen.value = !commentsOpen.value
+  if (!commentsOpen.value) return
+  commentsVisited.value = true
+  if (props.post.comments_count && !props.post.comments.length) {
+    emit('loadComments', props.post.id)
+  }
+  if (focus) {
+    await nextTick()
+    comments.value?.focus()
+  }
 }
 </script>
 
 <template>
   <article class="neighbor-post" :aria-label="`Publicación de ${post.author}`">
     <header class="post-heading">
+      <CurrentUserAvatar v-if="post.owned" :size="38" class="neighbor-avatar" />
       <NAvatar
+        v-else
         round
-        :size="46"
-        :src="post.avatar"
+        :size="38"
+        :src="post.avatar || undefined"
         :img-props="{ alt: '' }"
         class="neighbor-avatar"
-      >{{ post.author.charAt(0) }}</NAvatar>
-      <div class="post-author">
-        <p>
-          <strong>{{ post.author }}</strong
-          ><span v-if="post.isWelcome"> se unió al barrio</span
-          ><span v-else> compartió una publicación</span>
-        </p>
-        <div class="post-meta">
-          <span class="post-location">
-            <AppIcon name="pin" :size="13" />{{ post.neighborhood }}
-          </span>
-          <span class="meta-dot" aria-hidden="true">·</span>
-          <span>{{ post.time }}</span>
-        </div>
-      </div>
-      <NDropdown
-        trigger="click"
-        :options="[
-          {
-            label: post.saved ? 'Quitar de guardados' : 'Guardar publicación',
-            key: 'save',
-          },
-        ]"
-        @select="emit('save', post.id)"
       >
-        <NButton
-          quaternary
-          circle
-          class="post-menu"
-          :aria-label="`Opciones de la publicación de ${post.author}`"
-          ><AppIcon name="more" :size="20"
-        /></NButton>
+        <template v-if="!post.avatar" #default>{{ post.author.charAt(0) }}</template>
+        <template #fallback>{{ post.author.charAt(0) }}</template>
+      </NAvatar>
+      <div class="post-byline">
+        <strong>{{ post.author }}</strong>
+        <span v-if="post.isWelcome">Se unió al barrio</span>
+        <span v-else-if="post.neighborhood">{{ post.neighborhood }}</span>
+      </div>
+      <NDropdown v-if="post.owned" trigger="click" :options="ownerOptions" @select="selectOwnerAction">
+        <button type="button" class="post-control post-menu" aria-label="Opciones de tu publicación">
+          <AppIcon name="more" :size="20" />
+        </button>
       </NDropdown>
     </header>
-    <p style="margin: 12px 16px; color: var(--lavender); font-weight: 800">
-      {{ postKinds.find((item) => item.value === post.kind)?.label }}
-      <span v-if="post.status === 'resolved'">· Atendido / finalizado</span>
-    </p>
-    <div class="post-copy">
-      <p v-for="(paragraph, index) in post.paragraphs" :key="index">
-        {{ paragraph }}
-      </p>
-    </div>
-    <div v-if="post.owned" style="display: flex; gap: 8px; padding: 0 16px">
-      <NButton size="small" @click="emit('resolve', post.id)">{{
-        post.status === 'open' ? 'Marcar como atendido' : 'Reabrir'
-      }}</NButton
-      ><NButton size="small" @click="emit('remove', post.id)">Retirar</NButton>
-    </div>
-    <div class="post-actions">
-      <NButton
-        round
-        class="welcome-button"
-        :class="{ 'is-reacted': post.welcomed }"
-        :aria-pressed="post.welcomed"
-        @click="emit('welcome', post.id)"
-      >
-        <AppIcon :name="post.welcomed ? 'check' : 'smile'" :size="17" />
-        {{ post.isWelcome ? 'Dar la bienvenida' : 'Me gusta' }}
-      </NButton>
-      <NButton round :aria-expanded="composing" @click="openComment">
-        <AppIcon name="chat" :size="16" /> Comentar
-      </NButton>
-    </div>
-    <div v-if="post.reactions > 0" class="reaction-summary">
-      <span v-if="post.welcomed && post.reactions === 1">Te gusta esta publicación</span>
-      <span v-else
-        >{{ post.welcomed ? 'Tú y ' : ''
-        }}{{ post.reactions - (post.welcomed ? 1 : 0) }}
-        {{ post.welcomed ? 'vecinos más' : 'vecinos' }}
-        {{ post.isWelcome ? 'le dieron la bienvenida' : 'reaccionaron' }}</span
-      >
-    </div>
-    <NButton
-      v-if="post.comments_count && !post.comments.length"
-      quaternary
-      @click="emit('loadComments', post.id)"
-      >Ver {{ post.comments_count }} comentarios</NButton
-    >
-    <NButton
-      v-if="hasMoreComments"
-      quaternary
-      @click="emit('moreComments', post.id)"
-      >Ver comentarios anteriores</NButton
-    >
-    <div v-if="post.comments.length" class="comments">
-      <div v-for="comment in post.comments" :key="comment.id" class="comment">
-        <NAvatar
-          round
-          :size="34"
-          :src="comment.avatar"
-          :img-props="{ alt: '' }"
-          class="neighbor-avatar"
-        >{{ comment.author.charAt(0) }}</NAvatar>
-        <div class="comment-bubble">
-          <div class="comment-byline">
-            <strong>{{ comment.author }}</strong
-            ><span>{{ comment.time }}</span>
-          </div>
-          <p>{{ comment.text }}</p>
-        </div>
+
+    <PostPhotoGallery
+      v-if="post.has_photo"
+      :post-id="post.id"
+      :count="post.photo_count ?? 1"
+      edge
+    />
+    <PostCaption v-else class="post-text" :post="post" />
+
+    <div class="post-footer">
+      <div class="post-actions" role="group" aria-label="Acciones de la publicación">
+        <button
+          type="button"
+          class="post-control post-like"
+          :aria-label="reactionLabel"
+          :title="reactionLabel"
+          :aria-pressed="post.welcomed"
+          @click="emit('welcome', post.id)"
+        >
+          <AppIcon :name="post.isWelcome ? 'smile' : 'heart'" :size="25" />
+        </button>
+        <button
+          type="button"
+          class="post-control"
+          aria-label="Comentar"
+          title="Comentar"
+          :aria-expanded="commentsOpen"
+          @click="toggleComments(true)"
+        >
+          <AppIcon name="chat" :size="24" />
+        </button>
+        <button
+          type="button"
+          class="post-control post-bookmark"
+          aria-label="Guardar publicación"
+          :title="post.saved ? 'Quitar de guardados' : 'Guardar publicación'"
+          :aria-pressed="post.saved"
+          @click="emit('save', post.id)"
+        >
+          <AppIcon name="bookmark" :size="24" />
+        </button>
       </div>
-    </div>
-    <form v-if="composing" class="comment-form" @submit.prevent="submitComment">
-      <NInput
-        ref="comment-input"
-        v-model:value="draft"
-        placeholder="Responde o coordina cómo ayudar…"
-        :input-props="{ 'aria-label': 'Tu comentario' }"
-        :maxlength="500"
+      <p v-if="post.reactions > 0" class="reaction-summary">{{ reactionCount }}</p>
+      <PostCaption v-if="post.has_photo" :post="post" />
+      <button
+        v-if="post.comments_count"
+        type="button"
+        class="comment-history"
+        :aria-expanded="commentsOpen"
+        @click="toggleComments(false)"
+      >
+        {{ commentsOpen ? 'Ocultar comentarios' : `Ver ${post.comments_count} ${post.comments_count === 1 ? 'comentario' : 'comentarios'}` }}
+      </button>
+      <span class="post-time">{{ post.time }}</span>
+      <PostComments
+        v-if="commentsVisited"
+        v-show="commentsOpen"
+        ref="comments"
+        :comments="post.comments"
+        :has-more="hasMoreComments"
+        @more="emit('moreComments', post.id)"
+        @submit="(text, done) => emit('comment', post.id, text, done)"
       />
-      <NButton
-        attr-type="submit"
-        circle
-        type="primary"
-        :disabled="!draft.trim() || sending"
-        :loading="sending"
-        aria-label="Enviar comentario"
-        ><AppIcon name="send" :size="18"
-      /></NButton>
-    </form>
+    </div>
   </article>
 </template>
+
+<style scoped>
+.neighbor-post {
+  min-width: 0;
+  padding-bottom: 15px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+.post-heading,
+.post-footer,
+.post-text {
+  padding-inline: var(--local-gutter);
+}
+.post-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 61px;
+  padding-block: 8px;
+}
+.neighbor-avatar {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+}
+.post-byline {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+.post-byline strong {
+  font-size: 0.875rem;
+  font-weight: 900;
+}
+.post-byline span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.post-text {
+  padding-bottom: 5px;
+}
+.post-footer {
+  display: grid;
+  gap: 5px;
+}
+.post-actions {
+  display: flex;
+  align-items: center;
+  margin-inline: -8px;
+}
+.post-control {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+}
+.post-control:hover {
+  background: var(--surface-soft);
+}
+.post-control:focus-visible {
+  outline-offset: -2px;
+}
+.post-control svg {
+  transition: transform var(--press-duration) ease-out;
+}
+.post-control:active svg {
+  transform: scale(0.88);
+}
+.post-menu {
+  margin-inline-end: -8px;
+  color: var(--muted);
+}
+.post-like[aria-pressed="true"] {
+  color: var(--coral);
+}
+.post-bookmark {
+  margin-inline-start: auto;
+}
+.post-bookmark[aria-pressed="true"] {
+  color: var(--lavender);
+}
+.post-like[aria-pressed="true"] svg,
+.post-bookmark[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+.reaction-summary {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 900;
+}
+.comment-history {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-align: start;
+}
+.comment-history:hover {
+  color: var(--text);
+}
+.post-time {
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+</style>

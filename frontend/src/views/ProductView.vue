@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import {
   NAvatar,
   NButton,
@@ -10,12 +10,14 @@ import {
 } from 'naive-ui'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
+import CurrentUserAvatar from '../components/auth/CurrentUserAvatar.vue'
+import { currentUser } from '../composables/useAuth'
 import { formatPrice, useMarketplace } from '../composables/useMarketplace'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
-const { listings, favoriteIds, toggleFavorite, markSold, removeListing } =
+const { listings, favoriteIds, toggleFavorite, markSold, removeListing, rememberListing } =
   useMarketplace()
 const listing = computed(() =>
   listings.value.find((item) => item.id === route.params.id),
@@ -23,6 +25,9 @@ const listing = computed(() =>
 const saved = computed(() =>
   listing.value ? favoriteIds.value.includes(listing.value.id) : false,
 )
+watch(() => listing.value?.id, (id) => {
+  if (id) rememberListing(id)
+}, { immediate: true })
 
 function save() {
   if (!listing.value) return
@@ -102,14 +107,16 @@ function deleteListing() {
           <p>{{ listing.description }}</p>
         </div>
         <div class="seller-profile">
+          <CurrentUserAvatar v-if="listing.owned" :size="46" />
           <NAvatar
+            v-else
             round
             :size="46"
             :src="listing.avatar"
             :img-props="{ alt: '' }"
           />
           <div>
-            <strong>{{ listing.owned ? 'Ana · Tú' : listing.seller }}</strong>
+            <strong>{{ listing.owned ? currentUser?.name || 'Tú' : listing.seller }}</strong>
             <p>Vecino de {{ listing.neighborhood }}</p>
           </div>
           <span class="seller-label">{{

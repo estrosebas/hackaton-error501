@@ -1,23 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, useTemplateRef } from 'vue'
+import { ref, onBeforeUnmount, useTemplateRef } from 'vue'
 import { NModal, NButton } from 'naive-ui'
 import FaceCapture from './FaceCapture.vue'
-import { api, clearSession } from '../../services/api'
-const emit = defineEmits<{ loaded: [url: string] }>()
-const avatar = ref(''), open = ref(false), camera = ref(false), photo = ref<string|null>(null), busy = ref(false), error = ref('')
+import { api } from '../../services/api'
+import { useProfileAvatar } from '../../composables/useProfileAvatar'
+const { refresh } = useProfileAvatar()
+const open = ref(false), camera = ref(false), photo = ref<string|null>(null), busy = ref(false), error = ref('')
 const photoInput = useTemplateRef<HTMLInputElement>('photoInput')
 let disposed = false
-async function load() {
-  const token = sessionStorage.getItem('masi.api.token')
-  const response = await fetch(`${(import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/,'')}/profile/avatar`, {headers:{Authorization:`Bearer ${token}`,Accept:'image/*'},cache:'no-store'})
-  if (response.status === 401) { if(sessionStorage.getItem('masi.api.token') === token) clearSession(); return }
-  if (!response.ok) return
-  const blob = await response.blob()
-  if(disposed) return
-  if(avatar.value) URL.revokeObjectURL(avatar.value)
-  avatar.value = URL.createObjectURL(blob)
-  emit('loaded', avatar.value)
-}
 async function upload(event: Event) {
   const input = event.currentTarget as HTMLInputElement
   const file = input.files?.[0]
@@ -32,12 +22,11 @@ async function upload(event: Event) {
 async function save() {
   if (!photo.value || busy.value) return
   busy.value=true;error.value=''
-  try { await api('/profile/avatar',{method:'POST',body:JSON.stringify({foto:photo.value})}); await load();open.value=false;photo.value=null;camera.value=false }
+  try { await api('/profile/avatar',{method:'POST',body:JSON.stringify({foto:photo.value})}); void refresh();open.value=false;photo.value=null;camera.value=false }
   catch(e){error.value=e instanceof Error?e.message:'No pudimos guardar tu foto.'}
   finally{busy.value=false}
 }
-onMounted(() => { void load().catch(() => {}) })
-onBeforeUnmount(() => {disposed=true;if(avatar.value)URL.revokeObjectURL(avatar.value)})
+onBeforeUnmount(() => { disposed = true })
 </script>
 <template>
   <NButton class="avatar-button" type="primary" secondary block size="large" @click="open=true;error='';photo=null;camera=false">Cambiar foto de perfil</NButton>

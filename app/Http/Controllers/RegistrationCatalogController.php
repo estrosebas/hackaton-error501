@@ -48,6 +48,11 @@ class RegistrationCatalogController extends Controller
         return response()->json(['data' => $tags]);
     }
 
+    public function profileOptions()
+    {
+        return response()->json(['data' => config('neighbor-profile')]);
+    }
+
     public function storeTaxonomy(Request $request)
     {
         $data = $request->validate(['type' => ['required', 'in:hashtag,category'], 'name' => ['required', 'string', 'max:80']]);

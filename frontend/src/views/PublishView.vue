@@ -4,7 +4,7 @@ import { NTabs, NTabPane, useMessage } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
 import PostComposer from '../components/community/PostComposer.vue'
 import ProductForm from '../components/marketplace/ProductForm.vue'
-import { useCommunity } from '../composables/useCommunity'
+import { useCommunity, type ActivityDetails } from '../composables/useCommunity'
 import { useMarketplace, type NewListing } from '../composables/useMarketplace'
 
 const route = useRoute()
@@ -14,23 +14,22 @@ const { neighborhood, addPost } = useCommunity()
 const { addListing } = useMarketplace()
 const saving = shallowRef(false)
 const error = shallowRef('')
-const kind = computed(() =>
-  route.name === 'create-product' ? 'producto' : 'publicacion',
-)
+const tabs = ['create', 'create-activity', 'create-product']
+const kind = computed(() => String(route.name))
 
 function changeKind(value: string) {
-  router.replace({
-    name: value === 'producto' ? 'create-product' : 'create',
-  })
+  if (saving.value || !tabs.includes(value)) return
+  error.value = ''
+  router.replace({ name: value })
 }
 
-async function publishPost(text: string, type: string) {
+async function publishPost(text: string, type: string, photos: Blob[], activity?: ActivityDetails) {
   if (saving.value) return
   saving.value = true
   error.value = ''
   try {
-    await addPost(text, type)
-    message.success('Tu publicación ya está en la comunidad')
+    await addPost(text, type, photos, activity)
+    message.success(activity ? 'Tu actividad ya está en Inicio' : 'Tu publicación ya está en la comunidad')
     await router.push({ name: 'home' })
   } catch (e) {
     error.value =
@@ -68,13 +67,20 @@ async function publishProduct(listing: NewListing) {
       </div>
     </div>
     <NTabs :value="kind" type="segment" animated @update:value="changeKind"
-      ><NTabPane name="publicacion" tab="Al barrio"
+      ><NTabPane name="create" tab="Al barrio"
         ><PostComposer
           :neighborhood="neighborhood"
           :saving="saving"
           :error="error"
           @publish="publishPost" /></NTabPane
-      ><NTabPane name="producto" tab="Vender algo"
+      ><NTabPane name="create-activity" tab="Actividad"
+        ><PostComposer
+          activity
+          :neighborhood="neighborhood"
+          :saving="saving"
+          :error="error"
+          @publish="publishPost" /></NTabPane
+      ><NTabPane name="create-product" tab="Vender algo"
         ><ProductForm
           :neighborhood="neighborhood"
           :saving="saving"

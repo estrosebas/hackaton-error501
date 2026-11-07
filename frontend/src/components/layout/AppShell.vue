@@ -4,9 +4,11 @@ import { RouterView, useRoute, type RouteLocationNormalizedLoaded } from 'vue-ro
 import CommunityHeader from '../community/CommunityHeader.vue'
 import BottomNavigation from '../community/BottomNavigation.vue'
 import CommunityPanels, { type Panel } from '../community/CommunityPanels.vue'
-import { provideCommunity, type Activity } from '../../composables/useCommunity'
+import { provideCommunity } from '../../composables/useCommunity'
+import { provideProfileAvatar } from '../../composables/useProfileAvatar'
 
-const { neighborhood } = provideCommunity()
+const { neighborhood, activities } = provideCommunity()
+provideProfileAvatar()
 const route = useRoute()
 const animatedTabs = new Set<RouteLocationNormalizedLoaded['name']>([
   'home',
@@ -16,8 +18,10 @@ const animatedTabs = new Set<RouteLocationNormalizedLoaded['name']>([
 ])
 const panel = shallowRef<Panel | null>(null)
 const unread = shallowRef(3)
-const selectedActivity = shallowRef<Activity | null>(null)
-const interested = shallowRef<string[]>([])
+const selectedActivityId = shallowRef<string>()
+const selectedActivity = computed(() =>
+  activities.value.find((activity) => activity.id === selectedActivityId.value),
+)
 const activeNav = computed(() => route.meta.section)
 const compactHeader = computed(
   () =>
@@ -31,15 +35,9 @@ function openPanel(value: Panel) {
   if (value === 'notifications') unread.value = 0
 }
 
-function selectActivity(activity: Activity) {
-  selectedActivity.value = activity
+function selectActivity(id: string) {
+  selectedActivityId.value = id
   panel.value = 'activity'
-}
-
-function toggleInterest(id: string) {
-  interested.value = interested.value.includes(id)
-    ? interested.value.filter((item) => item !== id)
-    : [...interested.value, id]
 }
 
 function removePreviousView(_element: Element, done: () => void) {
@@ -83,11 +81,9 @@ watch(
       v-model:panel="panel"
       :neighborhood="neighborhood"
       :selected-activity="selectedActivity"
-      :interested="interested"
       @change-neighborhood="neighborhood = $event"
       @open="openPanel"
       @select-activity="selectActivity"
-      @toggle-interest="toggleInterest"
     />
   </div>
 </template>

@@ -8,6 +8,24 @@ import {
   type GlobalThemeOverrides,
 } from 'naive-ui'
 import { RouterView } from 'vue-router'
+import { onMounted, onUnmounted } from 'vue'
+
+let layoutObserver: ResizeObserver | undefined
+onMounted(() => {
+  const root = document.documentElement
+  const syncLayoutWidth = () => {
+    // Fixed overlays use the viewport even when a drawer locks scrolling and
+    // preserves the scrollbar gutter on the document.
+    root.style.setProperty('--app-layout-width', `${root.getBoundingClientRect().width}px`)
+  }
+  syncLayoutWidth()
+  layoutObserver = new ResizeObserver(syncLayoutWidth)
+  layoutObserver.observe(root)
+})
+onUnmounted(() => {
+  layoutObserver?.disconnect()
+  document.documentElement.style.removeProperty('--app-layout-width')
+})
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {

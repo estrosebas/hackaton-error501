@@ -1,16 +1,20 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, useTemplateRef, watch } from 'vue'
 import { NButton } from 'naive-ui'
 import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
 import FaceCapture from './FaceCapture.vue'
+import ProfilePersonalization from './ProfilePersonalization.vue'
 import { api, ApiError, saveSession } from '../../services/api'
+import type { NeighborProfile } from '../../composables/useAuth'
 
 interface Identity { dni: string; given_names: string; paternal_surname: string; maternal_surname: string; birth_date: string; verification_digit: number }
 interface Place { code: string; name: string }
 interface Position { latitude: number; longitude: number; location_accuracy: number; location_captured_at: string }
 const emit = defineEmits<{ registered: [] }>()
 const step = ref(1)
+const steps = ['Tus datos', 'Tu foto', 'Tu perfil']
+const progress = useTemplateRef<HTMLOListElement>('progress')
 const dni = ref('')
 const identity = ref<Identity | null>(null)
 const ticket = ref('')
@@ -22,6 +26,11 @@ const locating = ref(false), lookupBusy = ref(false), submitting = ref(false)
 const provinceBusy = ref(false), districtBusy = ref(false)
 const notice = ref(''), locationNotice = ref(''), catalogError = ref('')
 const photo = ref<string | null>(null), consent = ref(false)
+const reviewingPhoto = ref(false)
+const profileStarted = ref(false)
+const personalization = ref<NeighborProfile>({
+  bio: null, skills: [], interests: [], availability: null, can_help: false,
+})
 const values = reactive({ email: '', phone: '', password: '', confirmation: '', neighborhood: '' })
 let identityRequest: AbortController | null = null
 let provinceRequest: AbortController | null = null
@@ -35,6 +44,10 @@ function message(error: unknown) { return error instanceof Error ? error.message
 watch(dni, () => {
   identityRequest?.abort(); identity.value = null; ticket.value = ''; ticketExpires.value = 0
   lookupBusy.value = false; notice.value = ''; photo.value = null; consent.value = false
+})
+watch(step, async () => {
+  await nextTick()
+  progress.value?.focus()
 })
 async function lookup() {
   if (!/^[0-9]{8}$/.test(dni.value) || lookupBusy.value) return
@@ -91,15 +104,39 @@ async function next() {
   if (!canContinue.value) { notice.value = 'Consulta tu DNI, selecciona tu distrito y activa tu ubicación.'; return }
   if (ticketExpires.value <= Date.now()) { notice.value = 'La consulta de DNI venció. Vuelve a consultar tu DNI.'; identity.value = null; ticket.value = ''; return }
   if (values.password !== values.confirmation) { notice.value = 'Las contraseñas deben coincidir.'; return }
-  photo.value = null; consent.value = false; step.value = 2
+  photo.value = null; consent.value = false; reviewingPhoto.value = false; step.value = 2
 }
-async function register() {
-  if (registering || !photo.value || !consent.value) return
-  notice.value = ''
-  if (ticketExpires.value <= Date.now()) { step.value = 1; identity.value = null; ticket.value = ''; notice.value = 'La consulta de DNI venció. Consulta nuevamente tu DNI.'; return }
-  if (!position.value || Date.now() - Date.parse(position.value.location_captured_at) >= 30 * 60 * 1000) {
-    step.value = 1; position.value = null; notice.value = 'Actualiza tu ubicación antes de crear la cuenta.'; return
+
+function verifyFreshness() {
+  if (ticketExpires.value <= Date.now()) {
+    step.value = 1; identity.value = null; ticket.value = ''; notice.value = 'La consulta de DNI venció. Consulta nuevamente tu DNI.'
+    return false
   }
+  if (!position.value || Date.now() - Date.parse(position.value.location_captured_at) >= 30 * 60 * 1000) {
+    step.value = 1; position.value = null; notice.value = 'Actualiza tu ubicación antes de crear la cuenta.'
+    return false
+  }
+  return true
+}
+
+function personalize() {
+  notice.value = ''
+  if (!photo.value || !consent.value || !verifyFreshness()) return
+  profileStarted.value = true
+  step.value = 3
+}
+
+function reviewPhoto() {
+  reviewingPhoto.value = Boolean(photo.value)
+  notice.value = ''
+  step.value = 2
+}
+
+async function register() {
+  if (registering || !photo.value || !consent.value || !verifyFreshness()) return
+  notice.value = ''
+  const profile = { ...personalization.value, bio: personalization.value.bio?.trim() || null }
+  const hasProfile = profile.bio || profile.skills.length || profile.interests.length || profile.availability || profile.can_help
   registering = true; submitting.value = true
   try {
     const result = await api<{ token: string; user: unknown }>('/auth/register', { method: 'POST', body: JSON.stringify({
@@ -107,12 +144,22 @@ async function register() {
       password: values.password, password_confirmation: values.confirmation,
       ubigeo: district.value, neighborhood: values.neighborhood, ...position.value,
       foto: photo.value, biometric_consent: true,
+      ...(hasProfile ? { neighbor_profile: profile } : {}),
     }) })
     saveSession(result.token, result.user); values.password = ''; values.confirmation = ''; photo.value = null
     emit('registered')
   } catch (error) {
     notice.value = message(error)
-    if (error instanceof ApiError && Object.keys(error.errors).some(key => key !== 'foto' && key !== 'biometric_consent')) step.value = 1
+    if (error instanceof ApiError) {
+      const keys = Object.keys(error.errors)
+      if (keys.some(key => key !== 'foto' && key !== 'biometric_consent' && !key.startsWith('neighbor_profile'))) {
+        step.value = 1
+      } else if (keys.includes('foto') || keys.includes('biometric_consent')) {
+        photo.value = null
+        reviewingPhoto.value = false
+        step.value = 2
+      }
+    }
   } finally { registering = false; submitting.value = false }
 }
 onMounted(loadRegions)
@@ -121,7 +168,11 @@ onBeforeUnmount(() => { disposed = true; locationGeneration++; identityRequest?.
 
 <template>
   <div class="registration">
-    <ol class="register-steps" aria-label="Pasos del registro"><li :aria-current="step === 1 ? 'step' : undefined" :class="{ active: step === 1 }"><span>1</span> Tus datos y tu barrio</li><li :aria-current="step === 2 ? 'step' : undefined" :class="{ active: step === 2 }"><span>2</span> Tu fotografía</li></ol>
+    <ol ref="progress" class="register-steps" aria-label="Pasos del registro" tabindex="-1">
+      <li v-for="(label, index) in steps" :key="label" :aria-current="step === index + 1 ? 'step' : undefined" :class="{ active: step === index + 1 }">
+        <span>{{ index + 1 }}</span>{{ label }}
+      </li>
+    </ol>
     <form v-if="step === 1" class="register-form" @submit.prevent="next">
       <fieldset class="register-section"><legend>Primero, tu DNI</legend>
         <div class="dni-row">
@@ -192,14 +243,41 @@ onBeforeUnmount(() => { disposed = true; locationGeneration++; identityRequest?.
       </template>
       <p v-if="notice" class="register-error" role="alert">{{ notice }}</p><NButton attr-type="submit" type="primary" size="large" block :disabled="!canContinue">Siguiente: mi fotografía →</NButton>
     </form>
-    <form v-else class="register-form" @submit.prevent="register"><div class="photo-intro"><h2>Una foto para tu perfil</h2><p>Te guiaremos para tomarla con tu cámara.</p></div><FaceCapture @validated="(value: string | null) => photo = value" /><label class="register-consent"><input v-model="consent" type="checkbox" required :disabled="submitting" /><span>Autorizo guardar mi fotografía y plantilla facial para gestionar mi perfil.</span></label><p v-if="notice" class="register-error" role="alert">{{ notice }}</p><NButton attr-type="submit" type="primary" size="large" block :loading="submitting" :disabled="!photo || !consent || submitting">Crear mi cuenta</NButton><NButton quaternary :disabled="submitting" @click="step = 1; photo = null; consent = false; notice = ''">← Revisar mis datos</NButton></form>
+    <form v-else-if="step === 2" class="register-form" @submit.prevent="personalize">
+      <div class="photo-intro">
+        <h2>Una foto para tu perfil</h2>
+        <p>Te guiaremos para tomarla con tu cámara.</p>
+      </div>
+      <div v-if="reviewingPhoto && photo" class="register-photo-review">
+        <img :src="photo" alt="Tu fotografía capturada" />
+        <NButton quaternary @click="photo = null; reviewingPhoto = false">Tomar otra foto</NButton>
+      </div>
+      <FaceCapture v-else @validated="(value: string | null) => photo = value" />
+      <label class="register-consent">
+        <input v-model="consent" type="checkbox" required />
+        <span>Autorizo guardar mi fotografía y plantilla facial para gestionar mi perfil.</span>
+      </label>
+      <p v-if="notice" class="register-error" role="alert">{{ notice }}</p>
+      <NButton attr-type="submit" type="primary" size="large" block :disabled="!photo || !consent">
+        Siguiente: mi perfil →
+      </NButton>
+      <NButton quaternary @click="step = 1; photo = null; consent = false; notice = ''">← Revisar mis datos</NButton>
+    </form>
+    <form v-if="profileStarted" v-show="step === 3" class="register-form" @submit.prevent="register">
+      <ProfilePersonalization v-model="personalization" :disabled="submitting" />
+      <p v-if="notice" class="register-error" role="alert">{{ notice }}</p>
+      <NButton attr-type="submit" type="primary" size="large" block :loading="submitting" :disabled="submitting">
+        Crear mi cuenta
+      </NButton>
+      <NButton quaternary :disabled="submitting" @click="reviewPhoto">← Revisar mi foto</NButton>
+    </form>
   </div>
 </template>
 
 <style scoped>
 .registration,.register-form,.register-section,.identity-data{display:grid;gap:16px}
-.register-steps{display:flex;list-style:none;padding:0;margin:0 0 4px;gap:16px;font-size:12px;color:var(--muted)}
-.register-steps li{display:flex;align-items:center;gap:6px;flex:1}
+.register-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));list-style:none;padding:0;margin:0 0 4px;gap:8px;font-size:12px;color:var(--muted);scroll-margin-top:16px}
+.register-steps li{display:flex;align-items:center;gap:6px;min-width:0}
 .register-steps span{display:grid;place-items:center;width:24px;height:24px;border:1px solid #ffffff30;border-radius:50%;flex-shrink:0}
 .register-steps .active{color:#ff9bb4;font-weight:800}
 .active span{background:#ff638922;border-color:var(--coral)}
@@ -224,6 +302,8 @@ select option{background:#1a1e35}
 .register-consent{display:flex;align-items:flex-start;font-size:12px;line-height:1.6;font-weight:400;gap:10px}
 .register-consent input{accent-color:var(--coral);width:18px;height:18px;flex-shrink:0}
 .register-form :deep(.n-button){min-height:44px;font-weight:800}
+.register-photo-review{display:grid;gap:8px}
+.register-photo-review img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:14px;background:var(--surface)}
 @media(max-width:360px){.register-grid{grid-template-columns:1fr}
 .dni-row{grid-template-columns:1fr}}
 

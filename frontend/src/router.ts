@@ -54,6 +54,12 @@ export const router = createRouter({
           meta: { title: 'Publicar', section: 'create' },
         },
         {
+          path: 'publicar/actividad',
+          name: 'create-activity',
+          component: () => import('./views/PublishView.vue'),
+          meta: { title: 'Publicar actividad', section: 'create' },
+        },
+        {
           path: 'publicar/producto',
           name: 'create-product',
           component: () => import('./views/PublishView.vue'),

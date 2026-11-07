@@ -16,12 +16,14 @@ Route::prefix('v1')->group(function () {
     Route::get('locations/regions/{region}/provinces', [RegistrationCatalogController::class, 'provinces'])->where('region', '[0-9]{2}');
     Route::get('locations/provinces/{province}/districts', [RegistrationCatalogController::class, 'districts'])->where('province', '[0-9]{4}');
     Route::get('taxonomy', [RegistrationCatalogController::class, 'taxonomy']);
+    Route::get('profile/options', [RegistrationCatalogController::class, 'profileOptions']);
     Route::post('face/check', [FacePhotoController::class, 'check'])->middleware('throttle:12,1');
     Route::post('auth/register', [RegistrationController::class, 'store'])->middleware('throttle:6,1');
     Route::post('auth/login', [ApiSessionController::class, 'store'])->middleware('throttle:6,1');
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('feed', [CommunityController::class, 'index']);
         Route::post('feed', [CommunityController::class, 'store'])->middleware(['can:posts.create', 'throttle:6,1']);
+        Route::get('feed/{post}/photo/{index?}', [CommunityController::class, 'photo'])->whereNumber('index');
         Route::get('feed/{post}/comments', [CommunityController::class, 'comments']);
         Route::post('feed/{post}/comments', [CommunityController::class, 'comment'])->middleware(['can:posts.create', 'throttle:20,1']);
         Route::put('feed/{post}/reaction', [CommunityController::class, 'reaction'])->middleware('throttle:60,1');

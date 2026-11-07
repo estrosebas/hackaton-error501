@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { NAvatar, NBadge, NButton } from 'naive-ui'
+import { NBadge, NButton } from 'naive-ui'
 import AppIcon from '../AppIcon.vue'
+import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
 import { RouterLink } from 'vue-router'
 
 defineProps<{ neighborhood: string; unread: number; compact?: boolean }>()
@@ -47,12 +48,9 @@ const emit = defineEmits<{
           class="profile-button"
           aria-label="Mi perfil"
           @click="emit('open', 'profile')"
-          ><NAvatar
-            round
-            :size="36"
-            src="/images/ana.jpg"
-            :img-props="{ alt: '' }"
-        /></NButton>
+        >
+          <CurrentUserAvatar :size="36" />
+        </NButton>
       </div>
     </div>
     <div v-if="!compact" class="neighborhood-bar">

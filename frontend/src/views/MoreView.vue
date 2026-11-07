@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { NAvatar, useMessage } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import ProfilePhoto from '../components/auth/ProfilePhoto.vue'
+import CurrentUserAvatar from '../components/auth/CurrentUserAvatar.vue'
 import type { Panel } from '../components/community/CommunityPanels.vue'
 import { useCommunity } from '../composables/useCommunity'
 import { useMarketplace } from '../composables/useMarketplace'
@@ -13,7 +14,6 @@ const { ownListings, favoriteIds } = useMarketplace()
 const emit = defineEmits<{ openPanel: [panel: Panel] }>()
 const router = useRouter()
 const signingOut = ref(false)
-const avatar = ref('')
 const message = useMessage()
 
 async function signOut() {
@@ -38,16 +38,11 @@ async function signOut() {
       type="button"
       @click="emit('openPanel', 'profile')"
     >
-      <NAvatar
-        round
-        :size="60"
-        :src="avatar || undefined"
-        :img-props="{ alt: '' }"
-      /><span
+      <CurrentUserAvatar :size="60" /><span
         ><strong>{{ currentUser?.name || 'Mi cuenta' }}</strong><small>{{ currentUser?.neighborhood || neighborhood }}</small></span
       ><AppIcon name="arrow" :size="20" />
     </button>
-    <ProfilePhoto @loaded="avatar = $event" />
+    <ProfilePhoto />
     <div class="more-menu">
       <RouterLink
         class="sheet-row"

@@ -4,10 +4,10 @@ export class ApiError extends Error {
   errors: Record<string, string[]>
   constructor(message: string, status: number, errors: Record<string, string[]> = {}) { super(message); this.status = status; this.errors = errors }
 }
-export async function api<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+async function request(path: string, options: RequestInit, accept: string): Promise<Response> {
   const headers = new Headers(options.headers)
-  headers.set('Accept', 'application/json')
-  if (options.body) headers.set('Content-Type', 'application/json')
+  headers.set('Accept', accept)
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   const token = sessionStorage.getItem('masi.api.token')
   if (token) headers.set('Authorization', `Bearer ${token}`)
   const timeout = AbortSignal.timeout(25000)
@@ -18,13 +18,21 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
     if (options.signal?.aborted) throw error
     throw new ApiError('No pudimos conectar con el servidor. Revisa tu conexión y vuelve a intentar.', 0)
   }
-  const data = await response.json().catch(() => ({}))
   if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
     if (response.status === 401 && token && sessionStorage.getItem('masi.api.token') === token) clearSession()
     const errors = data.errors || {}
     throw new ApiError(Object.values(errors).flat().join(' ') || data.message || 'No pudimos completar la solicitud. Intenta nuevamente.', response.status, errors)
   }
-  return data as T
+  return response
+}
+export async function api<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await request(path, options, 'application/json')
+  return response.json().catch(() => ({})) as Promise<T>
+}
+export async function apiImage(path: string, signal: AbortSignal): Promise<Blob> {
+  const response = await request(path, { signal, cache: 'no-store' }, 'image/*')
+  return response.blob()
 }
 export function saveSession(token: string, user: unknown) {
   sessionStorage.setItem('masi.api.token', token)

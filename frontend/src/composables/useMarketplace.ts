@@ -1,4 +1,5 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { currentUser } from './useAuth'
 
 export const productCategories = [
   'Bicicletas',
@@ -143,9 +144,22 @@ function readFavorites(): string[] {
 
 const listings = ref<Listing[]>([...readListings(), ...exampleListings])
 const favoriteIds = ref<string[]>(readFavorites())
+const recentIds = ref<string[]>([])
 const ownListings = computed(() =>
   listings.value.filter((listing) => listing.owned),
 )
+const recentlyViewed = computed(() =>
+  recentIds.value.flatMap((id) => {
+    const listing = listings.value.find((item) => item.id === id && !item.sold)
+    return listing ? [listing] : []
+  }),
+)
+
+watch(() => currentUser.value?.id, () => { recentIds.value = [] }, { flush: 'sync' })
+
+function rememberListing(id: string) {
+  recentIds.value = [id, ...recentIds.value.filter((value) => value !== id)].slice(0, 6)
+}
 
 function commitListings(next: Listing[]) {
   localStorage.setItem(
@@ -161,8 +175,8 @@ function addListing(payload: NewListing) {
     title: payload.title.trim(),
     description: payload.description.trim(),
     id: crypto.randomUUID(),
-    seller: 'Ana',
-    avatar: '/images/ana.jpg',
+    seller: currentUser.value?.name || 'Tú',
+    avatar: '',
     createdAt: new Date().toISOString(),
     owned: true,
     sold: false,
@@ -198,6 +212,8 @@ export function useMarketplace() {
     listings,
     ownListings,
     favoriteIds,
+    recentlyViewed,
+    rememberListing,
     addListing,
     markSold,
     removeListing,

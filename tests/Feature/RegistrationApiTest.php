@@ -68,6 +68,14 @@ class RegistrationApiTest extends TestCase
         $this->getJson('/api/v1/locations/regions/99/provinces')->assertNotFound();
     }
 
+    public function test_registration_profile_catalog_is_available_before_login(): void
+    {
+        $this->getJson('/api/v1/profile/options')->assertOk()
+            ->assertJsonPath('data.skills.0', 'Reparaciones')
+            ->assertJsonPath('data.interests.0', 'Caminatas')
+            ->assertJsonPath('data.availability.1', 'Por las tardes');
+    }
+
     public function test_native_registration_uses_provider_identity_and_assigns_only_neighbor(): void
     {
         Http::fake(['api.scrall.net/*' => Http::response($this->provider()), '*/extract' => Http::response([
@@ -83,6 +91,16 @@ class RegistrationApiTest extends TestCase
             'location_captured_at' => now()->subSecond()->toIso8601String(), 'biometric_consent' => true,
             'foto' => 'data:image/jpeg;base64,'.base64_encode(file_get_contents($image->getRealPath()))];
         $this->postJson('/api/v1/auth/register', array_replace($payload, ['latitude' => null]))->assertUnprocessable()->assertJsonValidationErrors('latitude');
+        $this->postJson('/api/v1/auth/register', $payload + ['neighbor_profile' => ['skills' => ['Etiqueta inventada']]])
+            ->assertUnprocessable()->assertJsonValidationErrors('neighbor_profile.skills.0');
+        $profile = [
+            'bio' => 'Me gusta arreglar bicicletas y cuidar plantas.',
+            'skills' => ['Reparaciones', 'Bicicletas'],
+            'interests' => ['Caminatas', 'Huerto vecinal'],
+            'availability' => 'Por las tardes',
+            'can_help' => true,
+        ];
+        $payload['neighbor_profile'] = $profile;
         $response = $this->postJson('/api/v1/auth/register', $payload)->assertCreated()->assertJsonPath('user.name', 'ANA PRUEBA TEST')
             ->assertJsonPath('user.region', 'LIMA')->assertJsonPath('token_type', 'Bearer');
         $user = User::firstOrFail();
@@ -90,8 +108,11 @@ class RegistrationApiTest extends TestCase
         $this->assertFalse($user->hasRole('admin'));
         $this->assertSame('LIMA', $user->district);
         $this->assertSame('2005-05-16', $user->birth_date->format('Y-m-d'));
+        $this->assertSame($profile, $user->neighbor_profile);
         $token = $response->json('token');
-        $this->withToken($token)->getJson('/api/v1/profile')->assertOk();
+        $this->withToken($token)->getJson('/api/v1/profile')->assertOk()
+            ->assertJsonPath('user.neighbor_profile.skills', $profile['skills'])
+            ->assertJsonPath('user.neighbor_profile.can_help', true);
         $this->withToken($token)->postJson('/api/v1/auth/logout')->assertNoContent();
         $this->assertDatabaseCount('personal_access_tokens', 0);
         $this->app['auth']->forgetGuards();

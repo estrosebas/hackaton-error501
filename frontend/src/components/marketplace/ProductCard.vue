@@ -1,12 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useMessage } from 'naive-ui'
 import { RouterLink } from 'vue-router'
-import { formatPrice, type Listing } from '../../composables/useMarketplace'
+import { formatPrice, useMarketplace, type Listing } from '../../composables/useMarketplace'
 import AppIcon from '../AppIcon.vue'
-defineProps<{ listing: Listing; wide: boolean }>()
+
+const props = defineProps<{ listing: Listing; featured?: boolean }>()
+const { favoriteIds, toggleFavorite } = useMarketplace()
+const message = useMessage()
+const saved = computed(() => favoriteIds.value.includes(props.listing.id))
+const condition = computed(() => props.listing.sold ? 'Vendido' : props.listing.condition)
+
+function save() {
+  try {
+    toggleFavorite(props.listing.id)
+  } catch {
+    message.error('No pudimos actualizar tus guardados. Revisa el almacenamiento del navegador.')
+  }
+}
 </script>
 
 <template>
-  <li class="listing" :class="{ 'listing--wide': wide }">
+  <li class="listing" :class="{ 'listing--featured': featured }">
     <RouterLink :to="{ name: 'product', params: { id: listing.id } }" class="listing-link">
       <div class="listing-media">
         <img
@@ -15,34 +30,38 @@ defineProps<{ listing: Listing; wide: boolean }>()
           alt=""
           width="720"
           height="460"
-          :loading="wide ? 'eager' : 'lazy'"
+          :loading="featured ? 'eager' : 'lazy'"
         />
-        <span class="listing-condition" :class="{ 'listing-condition--sold': listing.sold }">
-          {{ listing.sold ? 'Vendido' : listing.condition }}
-        </span>
+        <span v-if="!featured" class="listing-condition">{{ condition }}</span>
       </div>
       <div class="listing-info">
         <h3 class="listing-title">{{ listing.title }}</h3>
         <strong class="listing-price">{{ formatPrice(listing.price, { compact: true }) }}</strong>
-        <p class="listing-byline">
-          <span class="listing-seller">
-            <img v-if="listing.avatar" :src="listing.avatar" alt="" width="20" height="20" loading="lazy" />
-            {{ listing.owned ? 'Tu anuncio' : listing.seller }}
-          </span>
-          <span class="listing-location"><AppIcon name="pin" :size="13" />{{ listing.neighborhood }}</span>
-        </p>
+        <span v-if="featured" class="listing-featured-condition">{{ condition }}</span>
+        <span v-else class="listing-location">
+          <AppIcon name="pin" :size="13" />
+          <span>{{ listing.neighborhood }}{{ listing.owned ? ' · Tu anuncio' : '' }}</span>
+        </span>
       </div>
     </RouterLink>
+    <button
+      v-if="!listing.owned && !featured"
+      class="listing-save"
+      type="button"
+      :aria-label="`Guardar ${listing.title}`"
+      :aria-pressed="saved"
+      @click="save"
+    >
+      <AppIcon name="heart" :size="18" />
+    </button>
   </li>
 </template>
 
 <style scoped>
 .listing {
+  position: relative;
   display: flex;
   min-width: 0;
-}
-.listing--wide {
-  grid-column: 1 / -1;
 }
 .listing-link {
   display: flex;
@@ -56,17 +75,15 @@ defineProps<{ listing: Listing; wide: boolean }>()
   color: var(--text);
   text-decoration: none;
 }
-.listing-link:focus-visible {
+.listing-link:focus-visible,
+.listing-save:focus-visible {
   outline-offset: 2px;
 }
 .listing-media {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 5 / 4;
+  aspect-ratio: 1;
   background: var(--surface-soft);
-}
-.listing--wide .listing-media {
-  aspect-ratio: 2 / 1;
 }
 .listing-photo {
   position: absolute;
@@ -78,111 +95,101 @@ defineProps<{ listing: Listing; wide: boolean }>()
 }
 .listing-condition {
   position: absolute;
-  top: 9px;
-  left: 9px;
-  max-width: calc(100% - 18px);
+  inset-inline-start: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
   padding: 3px 7px;
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--surface);
   color: var(--text);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
-.listing-condition--sold {
+.listing-save {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 8px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+}
+.listing-save:hover,
+.listing-save[aria-pressed="true"] {
+  border-color: var(--local-accent-line);
   color: var(--local-accent-text);
+}
+.listing-save[aria-pressed="true"] svg {
+  fill: currentColor;
 }
 .listing-info {
   display: grid;
   flex: 1;
   grid-template-rows: auto auto 1fr;
   align-items: start;
-  gap: 6px;
-  padding: 11px;
+  gap: 5px;
+  padding: 10px 12px 12px;
   overflow-wrap: anywhere;
-}
-.listing--wide .listing-info {
-  grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
-  grid-template-rows: auto auto;
-  column-gap: 10px;
-  padding: 12px 14px;
 }
 .listing-title {
   margin: 0;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 800;
-  line-height: 1.25;
-}
-.listing--wide .listing-title {
-  font-size: 19px;
-  font-weight: 900;
-}
-.listing-byline,
-.listing-seller,
-.listing-location {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 3px 6px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-.listing-byline {
-  align-self: end;
-  gap: 5px 10px;
-}
-.listing-location {
-  color: var(--lavender);
+  line-height: 1.3;
 }
 .listing-price {
   color: var(--local-accent-text);
-  font-size: 18px;
+  font-size: 1rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
+}
+.listing-location {
+  display: flex;
+  align-self: end;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+.listing--featured .listing-link {
+  display: grid;
+  grid-template-columns: 53% minmax(0, 1fr);
+  border-color: var(--local-accent-line);
+  background: var(--local-accent-fill);
+}
+.listing--featured .listing-media {
+  min-height: 132px;
+  aspect-ratio: auto;
+}
+.listing--featured .listing-info {
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  gap: 6px;
+  padding: 12px;
+}
+.listing--featured .listing-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: clamp(1rem, 4.7vw, 1.25rem);
+  font-weight: 900;
+  line-height: 1.1;
+}
+.listing--featured .listing-price {
+  font-size: clamp(1.125rem, 5vw, 1.5rem);
   line-height: 1.15;
 }
-.listing--wide .listing-price {
-  grid-column: 2;
-  grid-row: 1 / 3;
-  align-self: center;
-  max-width: 9ch;
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: var(--local-accent-fill);
-  font-size: 20px;
-  text-align: center;
-}
-.listing-seller img {
-  flex-shrink: 0;
-  border-radius: 50%;
-  object-fit: cover;
-}
-@media (min-width: 350px) {
-  .listing--wide .listing-link {
-    display: grid;
-    grid-template-columns: 57% minmax(0, 1fr);
-  }
-  .listing--wide .listing-media {
-    min-width: 0;
-    min-height: clamp(140px, 37vw, 166px);
-    aspect-ratio: auto;
-  }
-  .listing--wide .listing-info {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
-    align-content: center;
-    gap: 9px;
-  }
-  .listing--wide .listing-title {
-    font-weight: 700;
-    text-wrap: balance;
-  }
-  .listing--wide .listing-price {
-    grid-area: auto;
-    justify-self: start;
-    max-width: 100%;
-  }
+.listing-featured-condition {
+  color: var(--text);
+  font-size: 0.75rem;
 }
 @media (hover: hover) {
   .listing-link:hover .listing-title {

@@ -32,6 +32,7 @@ class User extends Authenticatable implements HasMedia
         'dni', 'phone', 'ubigeo', 'neighborhood', 'latitude', 'longitude', 'biometric_consent_at',
         'given_names', 'paternal_surname', 'maternal_surname', 'birth_date', 'verification_digit', 'dni_checked_at',
         'region', 'province', 'district', 'location_accuracy', 'location_captured_at',
+        'neighbor_profile',
     ];
 
     /**
@@ -60,6 +61,7 @@ class User extends Authenticatable implements HasMedia
             'birth_date' => 'date:Y-m-d',
             'dni_checked_at' => 'datetime',
             'location_captured_at' => 'datetime',
+            'neighbor_profile' => 'array',
         ];
     }
 

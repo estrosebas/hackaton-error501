@@ -1,6 +1,6 @@
 # Servicios de registro y perfil
 
-Base local: `http://127.0.0.1:8000/api/v1`. Enviar `Accept: application/json`. El frontend separado en `frontend/` conecta su registro a estos endpoints mediante el proxy Vite de `/api`. El login usa DNI y contraseña registrados, valida la sesión con el servidor y protege las vistas. El contenido de la comunidad permanece de demostración.
+Base local: `http://127.0.0.1:8000/api/v1`. Enviar `Accept: application/json`. El frontend separado en `frontend/` conecta su registro a estos endpoints mediante el proxy Vite de `/api`. El login usa DNI y contraseña registrados, valida la sesión con el servidor y protege las vistas. El muro y las actividades se conectan a la API. El directorio de vecinos usa perfiles de ejemplo.
 
 ## Registro
 
@@ -76,6 +76,17 @@ Las rutas previas `/api/auth/*` conservan sesiones/CSRF y comparten la validaci�
 
 UBIGEO procede de [RitchieRD/ubigeos-peru-data](https://github.com/RitchieRD/ubigeos-peru-data), revisión fija `23cd3666b19f32bccdf36d90243c2a4462d6202c`, CC0. Los archivos originales, licencia y versión están en `database/data/ubigeo`; `catalog.json` normaliza las claves. Es un catálogo comunitario, no un padrón oficial certificado.
 
+## Personalización del perfil
+
+`GET /profile/options` devuelve sin sesión el catálogo de `skills`, `interests` y `availability`. El tercer paso del registro puede enviar `neighbor_profile` a `POST /auth/register` con los siguientes campos opcionales:
+
+- `bio`: texto de hasta 280 caracteres.
+- `skills` e `interests`: hasta cinco opciones distintas por grupo tomadas del catálogo.
+- `availability`: una opción del catálogo o `null`.
+- `can_help`: booleano que indica si la persona quiere mostrar que puede ayudar.
+
+El servidor conserva esta selección y la devuelve al titular en `GET /profile`. Las cuentas anteriores y los registros que omiten el paso pueden tener `neighbor_profile` nulo.
+
 ## Feed comunitario
 
 Todas las rutas requieren Sanctum y operan únicamente dentro del UBIGEO del usuario autenticado:
@@ -83,7 +94,8 @@ Todas las rutas requieren Sanctum y operan únicamente dentro del UBIGEO del usu
 | Método | Ruta bajo `/api/v1` | Función |
 | --- | --- | --- |
 | GET | `/feed?kind=need_help&saved=1&cursor=...` | Lista paginada, diez publicaciones por página; filtros opcionales |
-| POST | `/feed` | Crear con `body` (máximo 2000 caracteres) y `kind` |
+| POST | `/feed` | Crear con `body` (máximo 2000 caracteres) y `kind`. Multipart opcional con hasta cuatro archivos `photos[]` (JPEG, PNG o WebP, 1.5 MiB cada uno, hasta 2400 × 2400). El campo singular `photo` conserva su límite de 2 MiB |
+| GET | `/feed/{post}/photo/{index?}` | Foto WebP de la publicación por índice desde cero. Por defecto devuelve la portada, disponible para cuentas autenticadas del mismo distrito |
 | GET | `/feed/{post}/comments?cursor=...` | Comentarios paginados, veinte por página |
 | POST | `/feed/{post}/comments` | Comentar con `body` (máximo 500 caracteres) |
 | PUT | `/feed/{post}/reaction` | Establecer reacción con `selected: boolean` |
@@ -91,7 +103,9 @@ Todas las rutas requieren Sanctum y operan únicamente dentro del UBIGEO del usu
 | PATCH | `/feed/{post}` | Propietario establece `status: open` o `resolved` |
 | DELETE | `/feed/{post}` | Propietario o moderador retira la publicación |
 
-Categorías: `need_help`, `offer_help`, `collaboration`, `initiative`, `activity`, `alert`. Las listas devuelven `data` y `next_cursor`; las modificaciones devuelven `data`, salvo comentarios (mensaje) y eliminación (204). No se exponen DNI, coordenadas ni fotos biométricas. Las reacciones y guardados son idempotentes. El servidor extrae hasta cinco hashtags del texto mediante Spatie Tags.
+Categorías `moment`, `need_help`, `offer_help`, `collaboration`, `initiative`, `activity` y `alert`. Un `moment` puede contener solo fotos. Para programar una actividad, enviar juntos `activity_title` (hasta 100 caracteres), `activity_starts_at` (fecha futura ISO 8601 con zona) y `activity_location` (hasta 160 caracteres). La respuesta expone estos campos como `activity: { title, starts_at, location }` e indica cuántas fotos contiene con `photo_count`. Conserva `has_photo` para clientes previos.
+
+Las listas devuelven `data` y `next_cursor`. Las modificaciones devuelven `data`, salvo comentarios (mensaje) y eliminación (204). Las fotos publicadas se recodifican con PHP GD y WebP para eliminar metadatos y se guardan en el disco privado. Las fotos biométricas y los adjuntos personales mantienen el acceso exclusivo del propietario. El servidor extrae hasta cinco hashtags mediante Spatie Tags.
 
 ## Instalación y verificación
 

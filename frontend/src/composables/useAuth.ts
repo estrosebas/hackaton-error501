@@ -1,7 +1,20 @@
 import { shallowRef } from 'vue'
 import { api, ApiError, clearSession, saveSession } from '../services/api'
 
-export interface AuthUser { id: number; name: string; neighborhood: string | null; email: string }
+export interface NeighborProfile {
+  bio: string | null
+  skills: string[]
+  interests: string[]
+  availability: string | null
+  can_help: boolean
+}
+export interface AuthUser {
+  id: number
+  name: string
+  neighborhood: string | null
+  email: string
+  neighbor_profile?: Partial<NeighborProfile> | null
+}
 export const currentUser = shallowRef<AuthUser | null>(null)
 export const sessionError = shallowRef('')
 let pending: { token: string; request: Promise<boolean> } | null = null

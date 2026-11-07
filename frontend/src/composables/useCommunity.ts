@@ -1,5 +1,4 @@
 import {
-  computed,
   inject,
   provide,
   ref,
@@ -31,59 +30,32 @@ export interface Post {
   time: string
   isWelcome: boolean
   paragraphs: string[]
+  has_photo: boolean
+  photo_count?: number
+  activity: ActivityDetails | null
   welcomed: boolean
   reactions: number
   saved: boolean
   comments: Comment[]
 }
 
-export interface Activity {
-  id: string
+export interface ActivityDetails {
   title: string
-  category: string
-  date: string
-  time: string
+  starts_at: string
   location: string
-  image?: string
-  description: string
 }
 
-export const activities: Activity[] = [
-  {
-    id: 'garden',
-    title: 'Un huerto entre todos',
-    category: 'Comunidad',
-    date: 'SÁB',
-    time: '09:00',
-    location: 'Huerto de San Blas',
-    image: '/images/garden.jpg',
-    description:
-      'Trae tus ganas de aprender. Compartiremos semillas, prepararemos la tierra y cuidaremos juntos nuestro huerto. Puedes venir con toda la familia.',
-  },
-  {
-    id: 'market',
-    title: 'Hecho en el barrio',
-    category: 'Feria local',
-    date: 'DOM',
-    time: '10:00',
-    location: 'Plazoleta de San Blas',
-    description:
-      'Una mañana para conocer a nuestros artesanos, descubrir pequeños emprendimientos y apoyar lo que nace cerquita de casa.',
-  },
-  {
-    id: 'walk',
-    title: 'Caminemos juntos',
-    category: 'Al aire libre',
-    date: 'DOM',
-    time: '08:00',
-    location: 'Salida desde la plazoleta',
-    image: '/images/walk.jpg',
-    description:
-      'Una caminata tranquila para conocer los miradores del barrio y conversar con tus vecinos. Lleva agua, un sombrero y zapatos cómodos.',
-  },
-]
+const activityDate = new Intl.DateTimeFormat('es-PE', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
+
+export function formatActivityDate(startsAt: string) {
+  return activityDate.format(new Date(startsAt))
+}
 
 export const postKinds = [
+  { value: 'moment', label: 'Momento del barrio' },
   { value: 'need_help', label: 'Necesito ayuda' },
   { value: 'offer_help', label: 'Ofrezco ayuda' },
   { value: 'collaboration', label: 'Colaboración' },
@@ -96,7 +68,10 @@ function createCommunity() {
     currentUser.value?.neighborhood || 'Tu comunidad',
   )
   const posts = ref<Post[]>([])
-  const visiblePosts = computed(() => posts.value)
+  const activities = ref<Post[]>([])
+  const activitiesLoading = ref(true)
+  const activitiesError = ref(false)
+  let activityGeneration = 0
   const loading = ref(false),
     error = ref(''),
     kind = ref(''),
@@ -107,6 +82,19 @@ function createCommunity() {
   function fail(e: unknown) {
     error.value =
       e instanceof Error ? e.message : 'No pudimos completar la solicitud.'
+  }
+  async function loadActivities() {
+    const current = ++activityGeneration
+    activitiesLoading.value = true
+    activitiesError.value = false
+    try {
+      const response = await api<{ data: Post[] }>('/feed?kind=activity')
+      if (current === activityGeneration) activities.value = response.data
+    } catch {
+      if (current === activityGeneration) activitiesError.value = true
+    } finally {
+      if (current === activityGeneration) activitiesLoading.value = false
+    }
   }
   async function loadPosts(more = false) {
     if (more && (loading.value || !nextCursor.value)) return
@@ -210,14 +198,30 @@ function createCommunity() {
       done?.(false)
     }
   }
-  async function addPost(text: string, type: string) {
+  async function addPost(text: string, type: string, photos: Blob[], activity?: ActivityDetails) {
+    const fields = { body: text, kind: type, ...(activity && {
+      activity_title: activity.title,
+      activity_starts_at: activity.starts_at,
+      activity_location: activity.location,
+    }) }
+    let body: BodyInit = JSON.stringify(fields)
+    if (photos.length) {
+      const form = new FormData()
+      for (const [key, value] of Object.entries(fields)) form.set(key, value)
+      for (const photo of photos) {
+        form.append('photos[]', photo, photo.type === 'image/webp' ? 'foto.webp' : 'foto.png')
+      }
+      body = form
+    }
     await api('/feed', {
       method: 'POST',
-      body: JSON.stringify({ body: text, kind: type }),
+      body,
     })
     kind.value = ''
     savedOnly.value = false
-    await loadPosts()
+    const refreshPosts = loadPosts()
+    if (type === 'activity') await loadActivities()
+    await refreshPosts
   }
   async function resolve(id: string) {
     const post = posts.value.find((p) => p.id === id)
@@ -230,6 +234,7 @@ function createCommunity() {
         }),
       })
       Object.assign(post, { ...response.data, comments: post.comments })
+      if (post.kind === 'activity') void loadActivities()
     } catch (e) {
       fail(e)
     }
@@ -238,17 +243,25 @@ function createCommunity() {
     try {
       await api(`/feed/${id}`, { method: 'DELETE' })
       posts.value = posts.value.filter((p) => p.id !== id)
+      if (activities.value.some((activity) => activity.id === id)) {
+        activities.value = activities.value.filter((activity) => activity.id !== id)
+        void loadActivities()
+      }
     } catch (e) {
       fail(e)
     }
   }
   onMounted(() => {
     void loadPosts()
+    void loadActivities()
   })
   return {
     neighborhood,
     posts,
-    visiblePosts,
+    activities,
+    activitiesLoading,
+    activitiesError,
+    loadActivities,
     loading,
     error,
     kind,
