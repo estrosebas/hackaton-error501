@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\IdentityTicket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -38,6 +39,11 @@ class RegistrationTest extends TestCase
             'password' => 'test-password-123', 'password_confirmation' => 'test-password-123',
             'ubigeo' => '150101', 'neighborhood' => 'Barrio de prueba',
             'biometric_consent' => true, 'foto' => $this->photo(),
+            'latitude' => -12.04, 'longitude' => -77.03, 'location_captured_at' => now()->subSecond()->toIso8601String(),
+            'identity_token' => app(IdentityTicket::class)->issue([
+                'dni' => '00000001', 'name' => 'Vecina de prueba', 'given_names' => 'Vecina',
+                'paternal_surname' => 'de', 'maternal_surname' => 'prueba', 'birth_date' => '2000-01-01', 'verification_digit' => 1,
+            ]),
         ], $overrides);
     }
 

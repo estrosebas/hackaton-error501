@@ -51,12 +51,15 @@ if ([IO.File]::ReadAllText((Join-Path $projectRoot '.env')) -match '(?m)^APP_KEY
 }
 $localSettings = [IO.File]::ReadAllText((Join-Path $projectRoot '.env'))
 $testSettings = $localSettings.Replace('APP_ENV=local', 'APP_ENV=testing').Replace('DB_DATABASE=vecino', 'DB_DATABASE=vecino_test')
+$testSettings = [regex]::Replace($testSettings, '(?m)^SCRALL_BASIC_TOKEN=.*$', 'SCRALL_BASIC_TOKEN=')
 [IO.File]::WriteAllText((Join-Path $projectRoot '.env.testing'), $testSettings)
 $tokenLine = ($localSettings -split "`r?`n" | Where-Object { $_.StartsWith('FACE_PHOTO_CHECK_TOKEN=') })
 [IO.File]::WriteAllText((Join-Path $projectRoot 'modeloJose\.env'), "$tokenLine`nFACE_PHOTO_CHECK_PORT=8782`nFACE_CPU_THREADS=2`n")
 & (Join-Path $PSScriptRoot 'pg.ps1') init
 & php artisan migrate --force
 if ($LASTEXITCODE -ne 0) { throw 'Migraciones fallidas.' }
+& php artisan db:seed --force
+if ($LASTEXITCODE -ne 0) { throw 'Catalogos y permisos fallidos.' }
 if (-not (Test-Path -LiteralPath 'modeloJose\.venv\Scripts\python.exe')) { & uv venv --python 3.13 modeloJose/.venv }
 & uv pip install --python modeloJose/.venv/Scripts/python.exe -r modeloJose/requirements-dev.txt
 if ($LASTEXITCODE -ne 0) { throw 'Dependencias Python fallidas.' }
@@ -64,4 +67,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Dependencias Python fallidas.' }
 if ($LASTEXITCODE -ne 0) { throw 'Dependencias frontend fallidas.' }
 & npm run build
 if ($LASTEXITCODE -ne 0) { throw 'Build frontend fallido.' }
+& npm --prefix frontend ci --no-audit --no-fund
+if ($LASTEXITCODE -ne 0) { throw 'Dependencias del frontend separado fallidas.' }
+& npm --prefix frontend run build
+if ($LASTEXITCODE -ne 0) { throw 'Build del frontend separado fallido.' }
 Write-Host 'Entorno listo. Inicia con .\scripts\start-local.ps1'

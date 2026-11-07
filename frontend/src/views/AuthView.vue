@@ -3,6 +3,7 @@ import { shallowRef } from 'vue'
 import { useMessage } from 'naive-ui'
 import { RouterLink, useRouter } from 'vue-router'
 import AuthForm from '../components/auth/AuthForm.vue'
+import RegistrationForm from '../components/auth/RegistrationForm.vue'
 import AppIcon from '../components/AppIcon.vue'
 import { endDemoSession, startDemoSession } from '../composables/useDemoSession'
 
@@ -54,7 +55,7 @@ async function enterCommunity() {
           >masi<span class="brand-dot">.</span></span
         >
       </div>
-      <span class="auth-demo-badge">Modo demo</span>
+      <span class="auth-demo-badge">{{ mode === 'login' ? 'Modo demo' : 'Crear cuenta' }}</span>
     </header>
 
     <div class="auth-hero">
@@ -81,7 +82,8 @@ async function enterCommunity() {
             }}
           </p>
         </header>
-        <AuthForm
+        <RegistrationForm v-if="mode === 'register'" @registered="enterCommunity" />
+        <AuthForm v-else
           :key="mode"
           :mode="mode"
           :busy="entering"
@@ -105,7 +107,7 @@ async function enterCommunity() {
       </section>
 
       <footer class="auth-footer">
-        <p>Prueba el acceso con un correo y una contraseña de ejemplo.</p>
+        <p>{{ mode === 'login' ? 'Prueba el acceso con un correo y una contraseña de ejemplo.' : 'Tus datos de registro y tu fotografía se guardan de forma privada.' }}</p>
         <a href="https://unsplash.com/photos/O1D1C4DL-H0">Foto de Will Goodman · Cusco</a>
       </footer>
     </div>

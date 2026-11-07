@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\IdentityTicket;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +29,11 @@ class LiveEnrollmentTest extends TestCase
             'dni' => '00000099', 'name' => 'Prueba técnica', 'email' => 'live-test@example.test',
             'password' => 'test-password-123', 'password_confirmation' => 'test-password-123',
             'ubigeo' => '150101', 'neighborhood' => 'Prueba', 'biometric_consent' => true, 'foto' => $photo,
+            'latitude' => -12.04, 'longitude' => -77.03, 'location_captured_at' => now()->subSecond()->toIso8601String(),
+            'identity_token' => app(IdentityTicket::class)->issue([
+                'dni' => '00000099', 'name' => 'Prueba técnica', 'given_names' => 'Prueba',
+                'paternal_surname' => 'Técnica', 'maternal_surname' => 'Test', 'birth_date' => '2000-01-01', 'verification_digit' => 1,
+            ]),
         ])->assertCreated()->assertJsonMissingPath('embedding');
         $profile = User::firstOrFail()->faceProfile;
         $this->assertCount(128, $profile->embedding);

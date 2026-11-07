@@ -27,3 +27,9 @@ Laravel 12 / PHP 8.3, Vue 3, PostgreSQL portable 17.11 y un servicio CPU YuNet/S
 - La validación comprueba calidad/enrolabilidad, no identidad RENIEC, residencia, unicidad ni liveness.
 - Origen de componentes y limitaciones en docs/reutilizacion.md y docs/facial-api.md.
 - No copiar credenciales, fotos, galerías ni datos personales desde clubmejia.
+- API nueva en routes/api.php, prefijo /api/v1, Sanctum Bearer para Capacitor. Contrato en docs/backend-api.md.
+- Registro exige identity_token cifrado, DNI, foto, ubicación reciente y UBIGEO existente. Identidad desde Scrall; nombres de región/provincia/distrito derivados del catálogo, nunca del cliente.
+- SCRALL_BASIC_TOKEN solo en .env; pruebas simulan Scrall, nunca gastan consultas automáticamente.
+- Spatie permissions/media/tags instalados. Roles públicos solo neighbor. Adjuntos en disco local privado, acceso exclusivo del propietario.
+- frontend/ tiene el registro conectado a /api/v1 mediante proxy Vite. Login de demostración conservado. RegistrationForm captura ubicación con Capacitor Geolocation y foto con MediaPipe/ONNX, validada nuevamente por Python.
+- Recursos faciales del frontend se generan con scripts/sync-face-assets.mjs en predev/prebuild desde public/ del backend. No modificar los pesos sin actualizar sus hashes.

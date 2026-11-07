@@ -1,7 +1,7 @@
 let active = false
 
 export function hasDemoSession() {
-  return active
+  return active || !!sessionStorage.getItem('masi.api.token')
 }
 
 export function startDemoSession() {
@@ -10,4 +10,6 @@ export function startDemoSession() {
 
 export function endDemoSession() {
   active = false
+  sessionStorage.removeItem('masi.api.token')
+  sessionStorage.removeItem('masi.api.user')
 }

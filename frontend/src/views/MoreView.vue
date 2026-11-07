@@ -6,12 +6,16 @@ import type { Panel } from '../components/community/CommunityPanels.vue'
 import { useCommunity } from '../composables/useCommunity'
 import { useMarketplace } from '../composables/useMarketplace'
 import { endDemoSession } from '../composables/useDemoSession'
+import { api } from '../services/api'
 const { neighborhood } = useCommunity()
 const { ownListings, favoriteIds } = useMarketplace()
 const emit = defineEmits<{ openPanel: [panel: Panel] }>()
 const router = useRouter()
 
-function signOut() {
+async function signOut() {
+  if (sessionStorage.getItem('masi.api.token')) {
+    try { await api('/auth/logout', { method: 'POST' }) } catch { /* Clear this device's session even if the server is unavailable. */ }
+  }
   endDemoSession()
   return router.replace({ name: 'login', state: { masiContinueTo: null } })
 }

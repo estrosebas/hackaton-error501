@@ -1,12 +1,12 @@
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
-foreach ($name in @('laravel','face')) {
+foreach ($name in @('frontend','laravel','face')) {
     $pidFile = Join-Path $projectRoot ".local\$name.pid"
     if (-not (Test-Path -LiteralPath $pidFile)) { continue }
     $servicePid = [int][IO.File]::ReadAllText($pidFile)
     $process = Get-CimInstance Win32_Process -Filter "ProcessId = $servicePid"
     if ($process) {
-        $expected = if ($name -eq 'face') { 'main.py' } else { 'server.php' }
+        $expected = if ($name -eq 'face') { 'main.py' } elseif ($name -eq 'frontend') { 'vite.js' } else { 'server.php' }
         if ($process.CommandLine -notlike "*$expected*") { throw "El PID guardado de $name pertenece a otro proceso." }
         # Windows launchers may have multiple levels of children. Stop the whole
         # validated tree at once so a child cannot survive or be restarted.
