@@ -13,6 +13,12 @@ const unread = shallowRef(3)
 const selectedActivity = shallowRef<Activity | null>(null)
 const interested = shallowRef<string[]>([])
 const activeNav = computed(() => route.meta.section)
+const compactHeader = computed(
+  () =>
+    activeNav.value === 'home' ||
+    activeNav.value === 'neighbors' ||
+    (activeNav.value === 'market' && route.name !== 'product'),
+)
 
 function openPanel(value: Panel) {
   panel.value = value
@@ -44,7 +50,7 @@ watch(
     <CommunityHeader
       :neighborhood="neighborhood"
       :unread="unread"
-      :compact="activeNav === 'neighbors'"
+      :compact="compactHeader"
       @open="openPanel"
     />
     <main id="page-content" class="community-content" tabindex="-1">

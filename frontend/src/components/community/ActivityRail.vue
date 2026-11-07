@@ -6,7 +6,7 @@ const emit = defineEmits<{ select: [activity: Activity]; showAll: [] }>()
 
 <template>
   <section class="activities-section" aria-labelledby="activities-title">
-    <div class="section-heading">
+    <div class="local-section-heading">
       <h2 id="activities-title">Nos vemos en el barrio</h2>
       <button class="text-link" type="button" @click="emit('showAll')">
         Ver todo <AppIcon name="arrow" :size="15" />

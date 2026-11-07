@@ -19,7 +19,7 @@ const themeOverrides: GlobalThemeOverrides = {
     modalColor: '#1a1e35',
     popoverColor: '#242940',
     textColorBase: '#f4f3ff',
-    fontFamily: "'Nunito Sans', sans-serif",
+    fontFamily: 'var(--font)',
     borderRadius: '14px',
   },
   Drawer: { color: '#15192d' },
