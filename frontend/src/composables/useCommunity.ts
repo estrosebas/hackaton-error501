@@ -48,6 +48,8 @@ export interface ActivityDetails {
   title: string
   starts_at: string
   location: string
+  latitude?: number | null
+  longitude?: number | null
 }
 
 const activityDate = new Intl.DateTimeFormat('es-PE', {
@@ -120,11 +122,11 @@ function createCommunity() {
       if (current !== generation) return
       posts.value = more
         ? [
-            ...posts.value,
-            ...response.data.filter(
-              (p) => !posts.value.some((old) => old.id === p.id),
-            ),
-          ]
+          ...posts.value,
+          ...response.data.filter(
+            (p) => !posts.value.some((old) => old.id === p.id),
+          ),
+        ]
         : response.data
       nextCursor.value = response.next_cursor
     } catch (e) {
@@ -237,12 +239,16 @@ function createCommunity() {
         activity_title: activity.title,
         activity_starts_at: activity.starts_at,
         activity_location: activity.location,
+        ...(activity.latitude != null && { latitude: activity.latitude }),
+        ...(activity.longitude != null && { longitude: activity.longitude }),
       }),
     }
     let body: BodyInit = JSON.stringify(fields)
     if (photos.length) {
       const form = new FormData()
-      for (const [key, value] of Object.entries(fields)) form.set(key, value)
+      for (const [key, value] of Object.entries(fields)) {
+        if (value != null) form.set(key, String(value))
+      }
       for (const photo of photos) {
         form.append(
           'photos[]',

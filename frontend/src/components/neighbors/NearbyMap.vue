@@ -13,14 +13,21 @@ import AppIcon from '../AppIcon.vue'
 import type {
   Coordinates,
   NearbyNeighbor,
+  NearbyActivity,
 } from '../../composables/useNearbyNeighbors'
 
-const props = defineProps<{
-  center: Coordinates
-  neighbors: NearbyNeighbor[]
-  selectedId?: string
-  radius: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    center: Coordinates
+    neighbors: NearbyNeighbor[]
+    activities?: NearbyActivity[]
+    selectedId?: string
+    radius: number
+  }>(),
+  {
+    activities: () => [],
+  },
+)
 const emit = defineEmits<{ select: [id: string] }>()
 const container = useTemplateRef<HTMLDivElement>('map-container')
 const tileLoaded = shallowRef(false)
@@ -45,6 +52,7 @@ function fitNeighbors() {
   const positions: L.LatLngExpression[] = [
     props.center,
     ...props.neighbors.map((person) => person.coordinates),
+    ...props.activities.map((act) => act.coordinates),
   ]
   const bounds = L.latLngBounds(positions)
   map.fitBounds(bounds, {
@@ -65,8 +73,12 @@ function updateSelection() {
   const person = props.neighbors.find(
     (neighbor) => neighbor.id === props.selectedId,
   )
-  if (person)
-    map?.panInside(person.coordinates, {
+  const activity = props.activities.find(
+    (act) => act.id === props.selectedId,
+  )
+  const targetCoords = person?.coordinates ?? activity?.coordinates
+  if (targetCoords)
+    map?.panInside(targetCoords, {
       paddingTopLeft: [40, 70],
       paddingBottomRight: [55, bottomPadding()],
       animate: !reducedMotion(),
@@ -77,6 +89,47 @@ function renderNeighbors() {
   if (!map || !markers) return
   markers.clearLayers()
   neighborMarkers.clear()
+
+  // 1. Actividades (Fijadas en el lugar de la actividad / origen)
+  for (const activity of props.activities) {
+    const content = document.createElement('div')
+    content.className = 'activity-map-badge'
+    const icon = document.createElement('div')
+    icon.className = 'activity-map-icon'
+    icon.textContent = '📅'
+    const title = document.createElement('span')
+    title.className = 'activity-pin-title'
+    title.textContent = activity.title
+    content.append(icon, title)
+
+    const pin = L.marker(activity.coordinates, {
+      icon: L.divIcon({
+        className: 'activity-map-pin',
+        html: content,
+        iconSize: [60, 72],
+        iconAnchor: [30, 36],
+      }),
+      title: `${activity.title} (${activity.location}), a ${activity.distance} metros`,
+      keyboard: true,
+      riseOnHover: true,
+    }).addTo(markers)
+
+    pin.on('click', () => emit('select', activity.id))
+    const element = pin.getElement()
+    element?.setAttribute(
+      'aria-label',
+      `Actividad: ${activity.title}, a ${activity.distance} metros`,
+    )
+    element?.addEventListener('keydown', (event) => {
+      if (event.key === ' ') {
+        event.preventDefault()
+        emit('select', activity.id)
+      }
+    })
+    neighborMarkers.set(activity.id, pin)
+  }
+
+  // 2. Vecinos
   for (const person of props.neighbors) {
     const content = document.createElement('div')
     content.className = 'neighbor-map-face'
@@ -184,7 +237,10 @@ onMounted(() => {
   resizeObserver.observe(container.value)
 })
 
-watch(() => [props.neighbors, props.center, props.radius], renderNeighbors)
+watch(
+  () => [props.neighbors, props.activities, props.center, props.radius],
+  renderNeighbors,
+)
 watch(() => props.selectedId, updateSelection)
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()

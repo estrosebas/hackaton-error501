@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { shallowRef, watch } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { NAvatar, NButton, NEmpty } from 'naive-ui'
 import AppIcon from '../AppIcon.vue'
 import NeighborFilters from './NeighborFilters.vue'
 import NearbyMap from './NearbyMap.vue'
 import NeighborPreview from './NeighborPreview.vue'
+import ActivityPreview from './ActivityPreview.vue'
 import NeighborProfileDrawer from './NeighborProfileDrawer.vue'
-import { useCommunity } from '../../composables/useCommunity'
+import { useCommunity, formatActivityDate } from '../../composables/useCommunity'
 import { useNearbyNeighbors } from '../../composables/useNearbyNeighbors'
 import type { Panel } from '../community/CommunityPanels.vue'
 import './nearby-neighbors.css'
 
+const router = useRouter()
 const { neighborhood } = useCommunity()
 const {
   search,
@@ -20,10 +23,16 @@ const {
   mode,
   center,
   filteredNeighbors,
+  filteredActivities,
   selectedNeighbor,
+  selectedActivity,
 } = useNearbyNeighbors(neighborhood)
 const showProfile = shallowRef(false)
 const emit = defineEmits<{ openPanel: [panel: Panel] }>()
+
+const totalCount = computed(
+  () => filteredNeighbors.value.length + filteredActivities.value.length,
+)
 
 function resetFilters() {
   search.value = ''
@@ -36,7 +45,7 @@ function openProfile(id: string) {
 }
 watch(neighborhood, () => {
   showProfile.value = false
-  selectedId.value = 'miguel'
+  selectedId.value = ''
 })
 </script>
 
@@ -54,38 +63,60 @@ watch(neighborhood, () => {
       <NearbyMap
         :center="center"
         :neighbors="filteredNeighbors"
-        :selected-id="selectedNeighbor?.id"
+        :activities="filteredActivities"
+        :selected-id="selectedId"
         :radius="radius"
         @select="selectedId = $event"
       />
       <div class="neighbor-map-count" role="status">
-        <span />{{ filteredNeighbors.length }}
-        {{
-          filteredNeighbors.length === 1
-            ? 'vecino cerca de ti'
-            : 'vecinos cerca de ti'
-        }}
+        <span />{{ totalCount }}
+        {{ totalCount === 1 ? 'punto en tu zona' : 'puntos en tu zona' }}
       </div>
+      <ActivityPreview
+        v-if="selectedActivity"
+        :activity="selectedActivity"
+        @view="router.push({ name: 'home' })"
+      />
       <NeighborPreview
-        v-if="selectedNeighbor"
+        v-else-if="selectedNeighbor"
         :neighbor="selectedNeighbor"
         @profile="showProfile = true"
       />
       <div v-else class="neighbor-map-empty">
-        <NEmpty description="No encontramos vecinos con esos filtros"
-          ><template #extra
-            ><NButton size="small" @click="resetFilters"
-              >Ver todos los vecinos</NButton
-            ></template
-          ></NEmpty
-        >
+        <NEmpty description="No encontramos vecinos ni actividades con esos filtros">
+          <template #extra>
+            <NButton size="small" @click="resetFilters">Ver todo</NButton>
+          </template>
+        </NEmpty>
       </div>
     </div>
     <div v-else class="neighbor-results-list">
       <div class="neighbor-results-heading">
-        <span>{{ filteredNeighbors.length }} vecinos en tu zona</span
-        ><span>Datos de ejemplo</span>
+        <span>{{ totalCount }} resultados en tu zona</span>
       </div>
+      <!-- Actividades / Eventos fijados -->
+      <button
+        v-for="act in filteredActivities"
+        :key="act.id"
+        class="neighbor-result-row"
+        type="button"
+        @click="router.push({ name: 'home' })"
+      >
+        <div class="activity-row-icon" aria-hidden="true">
+          <span>📅</span>
+        </div>
+        <span>
+          <strong>{{ act.title }}</strong>
+          <small>{{ act.location }} · {{ formatActivityDate(act.startsAt) }}</small>
+          <span class="neighbor-result-meta">
+            <AppIcon name="pin" :size="12" />A {{ act.distance }} m
+            <span class="activity-row-tag">Actividad</span>
+          </span>
+        </span>
+        <AppIcon name="arrow" :size="18" />
+      </button>
+
+      <!-- Vecinos -->
       <button
         v-for="person in filteredNeighbors"
         :key="person.id"
@@ -98,24 +129,25 @@ watch(neighborhood, () => {
           :size="52"
           :src="person.avatar"
           :img-props="{ alt: '' }"
-        /><span
-          ><strong>{{ person.name }}</strong
-          ><small>{{ person.skills.join(' · ') }}</small
-          ><span class="neighbor-result-meta"
-            ><AppIcon name="pin" :size="12" />A {{ person.distance }} m<span
-              v-if="person.canHelp"
-              class="neighbor-can-help"
-              >Puede ayudar</span
-            ></span
-          ></span
-        ><AppIcon name="arrow" :size="18" /></button
-      ><NEmpty
-        v-if="!filteredNeighbors.length"
-        description="No encontramos vecinos"
-        ><template #extra
-          ><NButton @click="resetFilters">Limpiar filtros</NButton></template
-        ></NEmpty
+        />
+        <span>
+          <strong>{{ person.name }}</strong>
+          <small>{{ person.skills.join(' · ') }}</small>
+          <span class="neighbor-result-meta">
+            <AppIcon name="pin" :size="12" />A {{ person.distance }} m
+            <span v-if="person.canHelp" class="neighbor-can-help">Puede ayudar</span>
+          </span>
+        </span>
+        <AppIcon name="arrow" :size="18" />
+      </button>
+      <NEmpty
+        v-if="!totalCount"
+        description="No encontramos resultados"
       >
+        <template #extra>
+          <NButton @click="resetFilters">Limpiar filtros</NButton>
+        </template>
+      </NEmpty>
     </div>
     <NeighborProfileDrawer
       v-model:show="showProfile"

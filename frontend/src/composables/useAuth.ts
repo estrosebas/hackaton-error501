@@ -13,6 +13,10 @@ export interface AuthUser {
   name: string
   neighborhood: string | null
   email: string
+  latitude?: number | string | null
+  longitude?: number | string | null
+  ubigeo?: string | null
+  district?: string | null
   neighbor_profile?: Partial<NeighborProfile> | null
 }
 export const currentUser = shallowRef<AuthUser | null>(null)

@@ -254,6 +254,55 @@
   color: #211528;
   background: #ff88a6;
 }
+.activity-map-pin {
+  display: grid;
+  place-items: center;
+}
+.activity-map-pin:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 1px;
+  border-radius: 13px;
+}
+.activity-map-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.activity-map-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 3px solid #f97316;
+  border-radius: 50%;
+  background: #3d2215;
+  font-size: 22px;
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.4);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.activity-map-pin.is-selected .activity-map-icon {
+  border-color: #fde047;
+  background: #ea580c;
+  transform: scale(1.1);
+}
+.activity-pin-title {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 7px;
+  border-radius: 5px;
+  color: #fff7ed;
+  background: #ea580ce8;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+.activity-map-pin.is-selected .activity-pin-title {
+  color: #1c1917;
+  background: #fed7aa;
+}
 .mock-origin-dot {
   position: relative;
   width: 22px;
@@ -384,6 +433,27 @@
   color: var(--text);
   background: transparent;
   text-align: left;
+}
+.activity-row-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #3d2215;
+  border: 2px solid #f97316;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.activity-row-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #ffedd5;
+  background: #ea580c;
+  font-size: 10px;
+  font-weight: 800;
+  margin-left: 6px;
 }
 .neighbor-result-row > span:not(.n-avatar) {
   flex: 1;

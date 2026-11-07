@@ -135,6 +135,13 @@ class CommunityFeedTest extends TestCase
             ->assertJsonPath('data.0.activity.starts_at', $details['activity_starts_at']);
         $this->postJson('/api/v1/feed', ['kind' => 'activity', 'body' => 'Actividad anterior'])
             ->assertCreated()->assertJsonPath('data.activity', null);
+        $detailsWithCoords = array_merge($details, [
+            'latitude' => -12.046374,
+            'longitude' => -77.042793,
+        ]);
+        $this->postJson('/api/v1/feed', $detailsWithCoords)->assertCreated()
+            ->assertJsonPath('data.activity.latitude', -12.046374)
+            ->assertJsonPath('data.activity.longitude', -77.042793);
     }
 
     public function test_a_photo_gallery_keeps_order_and_removes_all_files_with_the_post(): void

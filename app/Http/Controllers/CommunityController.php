@@ -35,6 +35,8 @@ class CommunityController extends Controller
                 'title' => $post->activity_title,
                 'starts_at' => $post->activity_starts_at->toISOString(),
                 'location' => $post->activity_location,
+                'latitude' => $post->latitude !== null ? (float) $post->latitude : null,
+                'longitude' => $post->longitude !== null ? (float) $post->longitude : null,
             ] : null,
             'reactions' => $post->getAttribute('reaction_total') ?? DB::table('community_reactions')->where('post_id', $post->id)->count(),
             'welcomed' => $post->getAttribute('my_reaction') ?? DB::table('community_reactions')->where('post_id', $post->id)->where('user_id', $request->user()->id)->exists(),
@@ -81,6 +83,8 @@ class CommunityController extends Controller
             'activity_title' => [$nonActivity, 'required_with:activity_starts_at,activity_location', 'nullable', 'string', 'max:100'],
             'activity_starts_at' => [$nonActivity, 'required_with:activity_title,activity_location', 'nullable', 'date', 'after:now'],
             'activity_location' => [$nonActivity, 'required_with:activity_title,activity_starts_at', 'nullable', 'string', 'max:160'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
         ], ['body.required' => 'Escribe el texto de tu publicación. Puedes compartir solo una foto en Momento del barrio.']);
         abort_unless($request->user()->ubigeo, 422, 'Completa tu distrito para publicar.');
         $body = trim($data['body'] ?? '');
@@ -96,6 +100,8 @@ class CommunityController extends Controller
                 $paths[] = $photos->store($file);
             }
             $post = DB::transaction(function () use ($request, $data, $body, $tags, $paths) {
+                $lat = $data['latitude'] ?? ($data['kind'] === 'activity' ? $request->user()->latitude : null);
+                $lng = $data['longitude'] ?? ($data['kind'] === 'activity' ? $request->user()->longitude : null);
                 $post = CommunityPost::create([
                     'user_id' => $request->user()->id, 'ubigeo' => $request->user()->ubigeo,
                     'kind' => $data['kind'], 'body' => $body, 'photo_path' => $paths[0] ?? null,
@@ -103,6 +109,8 @@ class CommunityController extends Controller
                     'activity_title' => $data['activity_title'] ?? null,
                     'activity_starts_at' => $data['activity_starts_at'] ?? null,
                     'activity_location' => $data['activity_location'] ?? null,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
                 ]);
                 $post->syncTagsWithType($tags, 'hashtag');
 

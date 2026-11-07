@@ -53,11 +53,16 @@ class LocalCommunitySeeder extends Seeder
             // Insert oldest first so the tire conversation is the newest item.
             foreach (array_reverse($fixture['posts'], true) as $index => $item) {
                 $created = now()->subHours($index * 3 + 1);
+                $isActivity = isset($item['title']);
+                $actLat = $isActivity ? ($zone === '040104' ? -16.3431157 + 0.0015 : -12.0464 + 0.0015) : null;
+                $actLng = $isActivity ? ($zone === '040104' ? -71.5825691 + 0.0018 : -77.0428 + 0.0018) : null;
                 $post = CommunityPost::withTrashed()->firstOrCreate(['demo_key' => 'feed-'.$zone.'-'.$index], [
                     'user_id' => $users[$index]->id, 'ubigeo' => $zone, 'kind' => $item['kind'], 'body' => $item['body'],
                     'created_at' => $created, 'updated_at' => $created,
                     'activity_title' => $item['title'] ?? null, 'activity_location' => $item['location'] ?? null,
                     'activity_starts_at' => isset($item['title']) ? now()->addDays(3 + $index)->setTime(15, 0)->toIso8601String() : null,
+                    'latitude' => $actLat,
+                    'longitude' => $actLng,
                 ]);
                 if ($post->wasRecentlyCreated) {
                     preg_match_all('/#([\p{L}\p{N}_]+)/u', $item['body'], $matches);

@@ -1,4 +1,6 @@
 import { computed, shallowRef, type Ref } from 'vue'
+import { currentUser } from './useAuth'
+import { useCommunity, type Post } from './useCommunity'
 
 export interface Coordinates {
   lat: number
@@ -22,6 +24,20 @@ export interface NearbyNeighbor extends Omit<NeighborExample, 'offset'> {
   coordinates: Coordinates
   neighborhood: string
   distance: number
+}
+
+export interface NearbyActivity {
+  id: string
+  postId: string
+  title: string
+  startsAt: string
+  location: string
+  body: string
+  author: string
+  avatar: string
+  coordinates: Coordinates
+  distance: number
+  isActivity: true
 }
 
 const defaultCenter = { lat: -13.5134, lng: -71.9779 }
@@ -136,9 +152,71 @@ export function useNearbyNeighbors(neighborhood: Ref<string>) {
   const search = shallowRef('')
   const radius = shallowRef(600)
   const filter = shallowRef<NeighborFilter>('all')
-  const selectedId = shallowRef('miguel')
+  const selectedId = shallowRef('')
   const mode = shallowRef<'map' | 'list'>('map')
-  const center = computed(() => centers[neighborhood.value] ?? defaultCenter)
+
+  const center = computed(() => {
+    const lat = Number(currentUser.value?.latitude)
+    const lng = Number(currentUser.value?.longitude)
+    if (!Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0)) {
+      return { lat, lng }
+    }
+    return centers[neighborhood.value] ?? defaultCenter
+  })
+
+  let communityActivities: Ref<Post[]> | null = null
+  try {
+    const community = useCommunity()
+    communityActivities = community.activities
+  } catch {
+    // If called outside provideCommunity
+  }
+
+  const nearbyActivities = computed<NearbyActivity[]>(() => {
+    if (!communityActivities?.value) return []
+    const list: NearbyActivity[] = []
+    communityActivities.value.forEach((post, index) => {
+      if (post.kind === 'activity' && post.activity) {
+        let lat = post.activity.latitude != null ? Number(post.activity.latitude) : null
+        let lng = post.activity.longitude != null ? Number(post.activity.longitude) : null
+        if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) {
+          const seed = (((Number(post.id) || (index + 1)) * 7) % 10) * 0.0007 + 0.0005
+          lat = center.value.lat + (index % 2 === 0 ? seed : -seed)
+          lng = center.value.lng + (index % 3 === 0 ? seed * 0.9 : -seed * 0.9)
+        }
+        const northMeters = (lat - center.value.lat) * 111195
+        const eastMeters =
+          (lng - center.value.lng) * 111195 * Math.cos((center.value.lat * Math.PI) / 180)
+        const distance = Math.round(Math.hypot(northMeters, eastMeters) / 10) * 10
+        list.push({
+          id: `activity-${post.id}`,
+          postId: post.id,
+          title: post.activity.title || 'Actividad comunitaria',
+          startsAt: post.activity.starts_at,
+          location: post.activity.location,
+          body: post.paragraphs.join(' '),
+          author: post.author,
+          avatar: post.avatar,
+          coordinates: { lat, lng },
+          distance,
+          isActivity: true,
+        })
+      }
+    })
+    return list.sort((a, b) => a.distance - b.distance)
+  })
+
+  const filteredActivities = computed(() => {
+    if (filter.value === 'help') return []
+    const term = searchable(search.value.trim())
+    return nearbyActivities.value.filter((act) => {
+      const matchesTerm = searchable(
+        `${act.title} ${act.location} ${act.body} ${act.author}`,
+      ).includes(term)
+      return act.distance <= radius.value && matchesTerm
+    })
+  })
+
   const neighbors = computed<NearbyNeighbor[]>(() =>
     examples
       .map((person) => {
@@ -158,23 +236,30 @@ export function useNearbyNeighbors(neighborhood: Ref<string>) {
       })
       .sort((first, second) => first.distance - second.distance),
   )
+
   const filteredNeighbors = computed(() => {
+    if (filter.value === 'activities') return []
     const term = searchable(search.value.trim())
     return neighbors.value.filter((person) => {
       const matchesTerm = searchable(
         `${person.name} ${person.skills.join(' ')} ${person.interests.join(' ')}`,
       ).includes(term)
       const matchesFilter =
-        filter.value === 'all' ||
-        (filter.value === 'help' ? person.canHelp : person.openToActivities)
+      filter.value === 'all' || (filter.value === 'help' && person.canHelp)
       return person.distance <= radius.value && matchesTerm && matchesFilter
     })
   })
+
   const selectedNeighbor = computed(
     () =>
-      filteredNeighbors.value.find(
-        (person) => person.id === selectedId.value,
-      ) ?? filteredNeighbors.value[0],
+    filteredNeighbors.value.find((p) => p.id === selectedId.value) ??
+    (!selectedActivity.value ? filteredNeighbors.value[0] : undefined),
+  )
+
+  const selectedActivity = computed(
+    () =>
+      filteredActivities.value.find((a) => a.id === selectedId.value) ??
+      (filter.value === 'activities' ? filteredActivities.value[0] : undefined),
   )
 
   return {
@@ -185,6 +270,8 @@ export function useNearbyNeighbors(neighborhood: Ref<string>) {
     mode,
     center,
     filteredNeighbors,
+    filteredActivities,
     selectedNeighbor,
+    selectedActivity,
   }
 }

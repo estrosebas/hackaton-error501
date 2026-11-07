@@ -42,6 +42,7 @@ const location = defineModel<string>('location', { required: true })
         :maxlength="160"
         placeholder="Ej. Entrada principal del parque"
       />
+      <p>📍 Se fijará en el mapa del distrito para que los vecinos vean dónde reunirse.</p>
     </div>
   </div>
 </template>

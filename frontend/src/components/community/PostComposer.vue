@@ -111,10 +111,14 @@ function submit() {
       dateExpired.value = true
       return
     }
+    const userLat = currentUser.value?.latitude != null ? Number(currentUser.value.latitude) : null
+    const userLng = currentUser.value?.longitude != null ? Number(currentUser.value.longitude) : null
     emit('publish', draft.value.trim(), 'activity', attachments, {
       title: activityTitle.value.trim(),
       starts_at: new Date(startTime.value).toISOString(),
       location: activityLocation.value.trim(),
+      latitude: userLat,
+      longitude: userLng,
     })
   } else if (kind.value) {
     emit('publish', draft.value.trim(), kind.value, attachments)
