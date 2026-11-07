@@ -7,6 +7,7 @@ import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
 import PostPhotoGallery from './PostPhotoGallery.vue'
 import PostCaption from './PostCaption.vue'
 import PostComments from './PostComments.vue'
+import NeighborLink from '../neighbors/NeighborLink.vue'
 
 const props = defineProps<{ post: Post; hasMoreComments: boolean }>()
 const emit = defineEmits<{
@@ -17,18 +18,26 @@ const emit = defineEmits<{
   resolve: [id: string]
   remove: [id: string]
   save: [id: string]
+  commentLike: [postId: string, commentId: string]
 }>()
 
 const commentsOpen = shallowRef(false)
 const commentsVisited = shallowRef(false)
 const comments = useTemplateRef<InstanceType<typeof PostComments>>('comments')
 const ownerOptions = computed(() => [
-  ...(props.post.kind === 'moment' ? [] : [{
-    label: props.post.status === 'resolved'
-      ? 'Reabrir'
-      : props.post.kind === 'activity' ? 'Marcar como finalizada' : 'Marcar como atendida',
-    key: 'resolve',
-  }]),
+  ...(props.post.kind === 'moment'
+    ? []
+    : [
+        {
+          label:
+            props.post.status === 'resolved'
+              ? 'Reabrir'
+              : props.post.kind === 'activity'
+                ? 'Marcar como finalizada'
+                : 'Marcar como atendida',
+          key: 'resolve',
+        },
+      ]),
   { label: 'Retirar publicación', key: 'remove' },
 ])
 const reactionLabel = computed(() =>
@@ -62,25 +71,44 @@ async function toggleComments(focus: boolean) {
 <template>
   <article class="neighbor-post" :aria-label="`Publicación de ${post.author}`">
     <header class="post-heading">
-      <CurrentUserAvatar v-if="post.owned" :size="38" class="neighbor-avatar" />
-      <NAvatar
-        v-else
-        round
-        :size="38"
-        :src="post.avatar || undefined"
-        :img-props="{ alt: '' }"
-        class="neighbor-avatar"
-      >
-        <template v-if="!post.avatar" #default>{{ post.author.charAt(0) }}</template>
-        <template #fallback>{{ post.author.charAt(0) }}</template>
-      </NAvatar>
+      <NeighborLink :id="post.author_id" :name="post.author">
+        <CurrentUserAvatar
+          v-if="post.owned"
+          :size="38"
+          class="neighbor-avatar"
+        />
+        <NAvatar
+          v-else
+          round
+          :size="38"
+          :src="post.avatar || undefined"
+          :img-props="{ alt: '' }"
+          class="neighbor-avatar"
+        >
+          <template v-if="!post.avatar" #default>{{
+            post.author.charAt(0)
+          }}</template>
+          <template #fallback>{{ post.author.charAt(0) }}</template>
+        </NAvatar>
+      </NeighborLink>
       <div class="post-byline">
-        <strong>{{ post.author }}</strong>
+        <NeighborLink :id="post.author_id" :name="post.author"
+          ><strong>{{ post.author }}</strong></NeighborLink
+        >
         <span v-if="post.isWelcome">Se unió al barrio</span>
         <span v-else-if="post.neighborhood">{{ post.neighborhood }}</span>
       </div>
-      <NDropdown v-if="post.owned" trigger="click" :options="ownerOptions" @select="selectOwnerAction">
-        <button type="button" class="post-control post-menu" aria-label="Opciones de tu publicación">
+      <NDropdown
+        v-if="post.owned"
+        trigger="click"
+        :options="ownerOptions"
+        @select="selectOwnerAction"
+      >
+        <button
+          type="button"
+          class="post-control post-menu"
+          aria-label="Opciones de tu publicación"
+        >
           <AppIcon name="more" :size="20" />
         </button>
       </NDropdown>
@@ -95,7 +123,11 @@ async function toggleComments(focus: boolean) {
     <PostCaption v-else class="post-text" :post="post" />
 
     <div class="post-footer">
-      <div class="post-actions" role="group" aria-label="Acciones de la publicación">
+      <div
+        class="post-actions"
+        role="group"
+        aria-label="Acciones de la publicación"
+      >
         <button
           type="button"
           class="post-control post-like"
@@ -127,7 +159,9 @@ async function toggleComments(focus: boolean) {
           <AppIcon name="bookmark" :size="24" />
         </button>
       </div>
-      <p v-if="post.reactions > 0" class="reaction-summary">{{ reactionCount }}</p>
+      <p v-if="post.reactions > 0" class="reaction-summary">
+        {{ reactionCount }}
+      </p>
       <PostCaption v-if="post.has_photo" :post="post" />
       <button
         v-if="post.comments_count"
@@ -136,7 +170,11 @@ async function toggleComments(focus: boolean) {
         :aria-expanded="commentsOpen"
         @click="toggleComments(false)"
       >
-        {{ commentsOpen ? 'Ocultar comentarios' : `Ver ${post.comments_count} ${post.comments_count === 1 ? 'comentario' : 'comentarios'}` }}
+        {{
+          commentsOpen
+            ? 'Ocultar comentarios'
+            : `Ver ${post.comments_count} ${post.comments_count === 1 ? 'comentario' : 'comentarios'}`
+        }}
       </button>
       <span class="post-time">{{ post.time }}</span>
       <PostComments
@@ -146,6 +184,7 @@ async function toggleComments(focus: boolean) {
         :comments="post.comments"
         :has-more="hasMoreComments"
         @more="emit('moreComments', post.id)"
+        @like="emit('commentLike', post.id, $event)"
         @submit="(text, done) => emit('comment', post.id, text, done)"
       />
     </div>
@@ -230,17 +269,17 @@ async function toggleComments(focus: boolean) {
   margin-inline-end: -8px;
   color: var(--muted);
 }
-.post-like[aria-pressed="true"] {
+.post-like[aria-pressed='true'] {
   color: var(--coral);
 }
 .post-bookmark {
   margin-inline-start: auto;
 }
-.post-bookmark[aria-pressed="true"] {
+.post-bookmark[aria-pressed='true'] {
   color: var(--lavender);
 }
-.post-like[aria-pressed="true"] svg,
-.post-bookmark[aria-pressed="true"] svg {
+.post-like[aria-pressed='true'] svg,
+.post-bookmark[aria-pressed='true'] svg {
   fill: currentColor;
 }
 .reaction-summary {

@@ -1,5 +1,7 @@
 # Servicios de registro y perfil
 
+Perfiles públicos, likes de comentarios, scroll y salas privadas: [contrato de conversaciones](neighbor-conversations.md).
+
 Base local: `http://127.0.0.1:8000/api/v1`. Enviar `Accept: application/json`. El frontend separado en `frontend/` conecta su registro a estos endpoints mediante el proxy Vite de `/api`. El login usa DNI y contraseña registrados, valida la sesión con el servidor y protege las vistas. El muro y las actividades se conectan a la API. El directorio de vecinos usa perfiles de ejemplo.
 
 ## Registro

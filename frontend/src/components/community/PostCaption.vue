@@ -18,11 +18,26 @@ const kind = computed(() => postKinds.find(item => item.value === props.post.kin
       </span>
     </div>
     <ActivityDetails v-if="post.activity" :details="post.activity" />
+    <div v-if="post.categories?.length" class="post-categories" aria-label="Categorías">
+      <span v-for="category in post.categories" :key="category">{{ category }}</span>
+    </div>
     <p v-for="(paragraph, index) in post.paragraphs" :key="index">{{ paragraph }}</p>
   </div>
 </template>
 
 <style scoped>
+.post-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.post-categories span {
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
 .post-caption {
   display: grid;
   gap: 5px;

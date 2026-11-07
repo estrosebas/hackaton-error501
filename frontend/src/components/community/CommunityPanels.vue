@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import { currentUser } from '../../composables/useAuth'
 import {
   NDrawer,
   NDrawerContent,
-  NEmpty,
   NTag,
 } from 'naive-ui'
 import AppIcon from '../AppIcon.vue'
@@ -117,13 +117,7 @@ function selectNeighborhood(neighborhood: string) {
         </button>
       </div>
       <div v-else-if="panel === 'messages'" class="sheet-empty">
-        <NEmpty description="Todo empieza con un saludo"
-          ><template #extra
-            ><p class="sheet-hint">
-              Todavía no tienes conversaciones.
-            </p></template
-          ></NEmpty
-        >
+        <RouterLink to="/mensajes" class="local-action">Abrir conversaciones</RouterLink>
       </div>
       <div v-else-if="panel === 'profile'" class="profile-sheet">
         <CurrentUserAvatar :size="76" />

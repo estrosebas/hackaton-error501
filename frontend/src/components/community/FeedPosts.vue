@@ -1,25 +1,77 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { NButton } from 'naive-ui'
+import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import AppIcon from '../AppIcon.vue'
 import AppSelect from '../AppSelect.vue'
 import NeighborPost from './NeighborPost.vue'
 import ActivityRail from './ActivityRail.vue'
-import { postKinds, useCommunity, type Post } from '../../composables/useCommunity'
+import {
+  postKinds,
+  useCommunity,
+  type Post,
+} from '../../composables/useCommunity'
 
 const emit = defineEmits<{ selectActivity: [id: string]; openActivities: [] }>()
 const {
-  posts, toggleWelcome, addComment, toggleSave, loading, error, kind, savedOnly,
-  nextCursor, loadPosts, loadComments, moreComments, commentCursors, resolve, remove,
-  activities, loadActivities,
+  posts,
+  toggleWelcome,
+  addComment,
+  toggleSave,
+  loading,
+  error,
+  kind,
+  savedOnly,
+  nextCursor,
+  loadPosts,
+  loadComments,
+  moreComments,
+  commentCursors,
+  resolve,
+  remove,
+  activities,
+  loadActivities,
+  toggleCommentLike,
+  retryMore,
 } = useCommunity()
+const sentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | undefined
+function loadVisible() {
+  if (
+    nextCursor.value &&
+    !loading.value &&
+    !error.value &&
+    sentinel.value &&
+    sentinel.value.getBoundingClientRect().top < innerHeight + 400
+  )
+    void loadPosts(true)
+}
+watch(
+  sentinel,
+  (el) => {
+    observer?.disconnect()
+    if (el && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) loadVisible()
+        },
+        { rootMargin: '400px' },
+      )
+      observer.observe(el)
+    }
+  },
+  { flush: 'post' },
+)
+watch([loading, nextCursor], async () => {
+  await nextTick()
+  loadVisible()
+})
+onBeforeUnmount(() => observer?.disconnect())
 const filtered = computed(() => Boolean(kind.value || savedOnly.value))
 const kindOptions = [{ label: 'Todas', value: '' }, ...postKinds]
 const timeline = computed(() => {
-  const activityIds = new Set(activities.value.map(activity => activity.id))
+  const activityIds = new Set(activities.value.map((activity) => activity.id))
   const items: { key: string; post?: Post }[] = posts.value
-    .filter(post => filtered.value || !activityIds.has(post.id))
-    .map(post => ({ key: post.id, post }))
+    .filter((post) => filtered.value || !activityIds.has(post.id))
+    .map((post) => ({ key: post.id, post }))
   if (!filtered.value) {
     const insertAt = posts.value[0]?.kind === 'activity' ? 0 : 1
     items.splice(insertAt, 0, { key: 'activity-rail' })
@@ -50,7 +102,8 @@ function clearFilters() {
 }
 
 function deletePost(id: string) {
-  if (window.confirm('¿Retirar esta publicación de la comunidad?')) void remove(id)
+  if (window.confirm('¿Retirar esta publicación de la comunidad?'))
+    void remove(id)
 }
 </script>
 
@@ -71,7 +124,12 @@ function deletePost(id: string) {
         label="Tipo de publicación"
         @update:value="changeKind"
       />
-      <button type="button" class="feed-saved" :aria-pressed="savedOnly" @click="toggleSaved">
+      <button
+        type="button"
+        class="feed-saved"
+        :aria-pressed="savedOnly"
+        @click="toggleSaved"
+      >
         <AppIcon name="bookmark" :size="16" /> Guardados
       </button>
       <button
@@ -88,13 +146,25 @@ function deletePost(id: string) {
 
     <div v-if="error" class="feed-state feed-state--error">
       <span role="alert">{{ error }}</span>
-      <button class="text-link" type="button" @click="loadPosts()">Reintentar</button>
+      <button class="text-link" type="button" @click="loadPosts(retryMore)">
+        Reintentar
+      </button>
     </div>
-    <p v-if="loading && !posts.length" class="feed-state" role="status">Cargando publicaciones…</p>
+    <p v-if="loading && !posts.length" class="feed-state" role="status">
+      Cargando publicaciones…
+    </p>
     <div v-else-if="!posts.length && !error" class="feed-state">
-      <strong>{{ filtered ? 'Sin publicaciones para este filtro' : 'El muro está esperando tu primera publicación' }}</strong>
-      <p v-if="!filtered">Pide ayuda, comparte una idea o invita a tus vecinos a un plan.</p>
-      <button v-else class="text-link" type="button" @click="clearFilters">Limpiar filtros</button>
+      <strong>{{
+        filtered
+          ? 'Sin publicaciones para este filtro'
+          : 'El muro está esperando tu primera publicación'
+      }}</strong>
+      <p v-if="!filtered">
+        Pide ayuda, comparte una idea o invita a tus vecinos a un plan.
+      </p>
+      <button v-else class="text-link" type="button" @click="clearFilters">
+        Limpiar filtros
+      </button>
     </div>
 
     <div v-if="timeline.length" class="feed-list" :aria-busy="loading">
@@ -110,6 +180,7 @@ function deletePost(id: string) {
           @more-comments="moreComments"
           @resolve="resolve"
           @remove="deletePost"
+          @comment-like="toggleCommentLike"
         />
         <ActivityRail
           v-else
@@ -117,14 +188,24 @@ function deletePost(id: string) {
           @open-agenda="emit('openActivities')"
         />
       </template>
-      <NButton v-if="nextCursor" class="feed-more" secondary round :loading="loading" @click="loadPosts(true)">
-        Ver más publicaciones
-      </NButton>
+      <div ref="sentinel" class="feed-scroll-state" role="status">
+        <span v-if="loading">Cargando publicaciones…</span
+        ><span v-else-if="!nextCursor && posts.length"
+          >Ya estás al día con tu comunidad</span
+        >
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
+.feed-scroll-state {
+  min-height: 65px;
+  padding: 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
 .feed-posts {
   display: grid;
   gap: 12px;
@@ -184,12 +265,12 @@ function deletePost(id: string) {
 .feed-filters button:hover {
   border-color: var(--lavender);
 }
-.feed-saved[aria-pressed="true"] {
+.feed-saved[aria-pressed='true'] {
   border-color: var(--local-accent-line);
   background: var(--local-accent-fill);
   color: var(--local-accent-text);
 }
-.feed-refresh[aria-disabled="true"] {
+.feed-refresh[aria-disabled='true'] {
   color: var(--muted);
   cursor: wait;
 }

@@ -4,11 +4,13 @@ import { NAvatar, NButton, NInput, type InputInst } from 'naive-ui'
 import type { Comment } from '../../composables/useCommunity'
 import AppIcon from '../AppIcon.vue'
 import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
+import NeighborLink from '../neighbors/NeighborLink.vue'
 
 defineProps<{ comments: Comment[]; hasMore: boolean }>()
 const emit = defineEmits<{
   submit: [text: string, done: (success: boolean) => void]
   more: []
+  like: [id: string]
 }>()
 const draft = shallowRef('')
 const sending = shallowRef(false)
@@ -29,18 +31,50 @@ defineExpose({ focus: () => input.value?.focus() })
 
 <template>
   <section class="post-comments" aria-label="Comentarios de la publicación">
-    <button v-if="hasMore" class="comments-more" type="button" @click="emit('more')">
+    <button
+      v-if="hasMore"
+      class="comments-more"
+      type="button"
+      @click="emit('more')"
+    >
       Ver comentarios anteriores
     </button>
     <ul v-if="comments.length" class="comments-list" role="list">
       <li v-for="comment in comments" :key="comment.id" class="comment">
-        <NAvatar round :size="28" :src="comment.avatar || undefined" :img-props="{ alt: '' }" class="comment-avatar">
-          <template v-if="!comment.avatar" #default>{{ comment.author.charAt(0) }}</template>
-          <template #fallback>{{ comment.author.charAt(0) }}</template>
-        </NAvatar>
+        <NeighborLink :id="comment.author_id" :name="comment.author">
+          <NAvatar
+            round
+            :size="28"
+            :src="comment.avatar || undefined"
+            :img-props="{ alt: '' }"
+            class="comment-avatar"
+          >
+            <template v-if="!comment.avatar" #default>{{
+              comment.author.charAt(0)
+            }}</template>
+            <template #fallback>{{ comment.author.charAt(0) }}</template>
+          </NAvatar>
+        </NeighborLink>
         <div class="comment-text">
-          <p><strong>{{ comment.author }}</strong> {{ comment.text }}</p>
-          <span>{{ comment.time }}</span>
+          <p>
+            <NeighborLink :id="comment.author_id" :name="comment.author"
+              ><strong>{{ comment.author }}</strong></NeighborLink
+            >
+            {{ comment.text }}
+          </p>
+          <div class="comment-meta">
+            <span>{{ comment.time }}</span
+            ><button
+              type="button"
+              class="comment-like"
+              :aria-label="`Me gusta el comentario de ${comment.author}`"
+              :aria-pressed="comment.liked"
+              @click="emit('like', comment.id)"
+            >
+              <AppIcon name="heart" :size="13" />{{ comment.likes || '' }}
+              {{ comment.liked ? 'Te gusta' : 'Me gusta' }}
+            </button>
+          </div>
         </div>
       </li>
     </ul>
@@ -70,6 +104,30 @@ defineExpose({ focus: () => input.value?.focus() })
 </template>
 
 <style scoped>
+.comment-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.comment-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.6875rem;
+  cursor: pointer;
+}
+.comment-like[aria-pressed='true'] {
+  color: var(--local-accent-text);
+}
+.comment-like[aria-pressed='true'] :deep(svg) {
+  fill: currentColor;
+}
 .post-comments {
   display: grid;
   gap: 10px;

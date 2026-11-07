@@ -26,7 +26,7 @@ class CommunityController extends Controller
         $photoCount = count($post->publishedPhotoPaths());
 
         return [
-            'id' => (string) $post->id, 'author' => $post->author->name, 'avatar' => '',
+            'id' => (string) $post->id, 'author_id' => $post->user_id, 'author' => $post->author->name, 'avatar' => $post->author->demoAvatarUrl(),
             'neighborhood' => $post->author->neighborhood, 'time' => $post->created_at->diffForHumans(),
             'kind' => $post->kind, 'status' => $post->status, 'owned' => $post->user_id === $request->user()->id,
             'isWelcome' => false, 'paragraphs' => $post->body === '' ? [] : explode("\n", $post->body),
@@ -40,7 +40,8 @@ class CommunityController extends Controller
             'welcomed' => $post->getAttribute('my_reaction') ?? DB::table('community_reactions')->where('post_id', $post->id)->where('user_id', $request->user()->id)->exists(),
             'saved' => $post->getAttribute('my_bookmark') ?? DB::table('community_bookmarks')->where('post_id', $post->id)->where('user_id', $request->user()->id)->exists(),
             'comments_count' => $post->comments_count ?? $post->comments()->count(),
-            'comments' => [], 'tags' => $post->tags->map(fn ($tag) => $tag->name)->values(),
+            'comments' => [], 'tags' => $post->tags->where('type', 'hashtag')->map(fn ($tag) => $tag->name)->values(),
+            'categories' => $post->tags->where('type', 'category')->map(fn ($tag) => $tag->name)->values(),
         ];
     }
 
@@ -51,7 +52,7 @@ class CommunityController extends Controller
         $posts = CommunityPost::where('ubigeo', $request->user()->ubigeo)
             ->when($data['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
             ->when($request->boolean('saved'), fn ($q) => $q->whereIn('id', DB::table('community_bookmarks')->select('post_id')->where('user_id', $request->user()->id)))
-            ->with(['author:id,name,neighborhood', 'tags'])->withCount('comments')->orderByDesc('id')->cursorPaginate(10);
+            ->with(['author:id,name,neighborhood,demo_key,demo_avatar', 'tags'])->withCount('comments')->orderByDesc('id')->cursorPaginate(10);
 
         $ids = $posts->getCollection()->pluck('id');
         $counts = DB::table('community_reactions')->whereIn('post_id', $ids)->selectRaw('post_id, count(*) as total')->groupBy('post_id')->pluck('total', 'post_id');
@@ -134,9 +135,12 @@ class CommunityController extends Controller
     public function comments(Request $request, CommunityPost $post)
     {
         $this->scope($request, $post);
-        $items = $post->comments()->with('author:id,name')->orderByDesc('id')->cursorPaginate(20);
+        $items = $post->comments()->with('author:id,name,demo_key,demo_avatar')->orderByDesc('id')->cursorPaginate(20);
+        $ids = $items->getCollection()->pluck('id');
+        $counts = DB::table('community_comment_reactions')->whereIn('comment_id', $ids)->selectRaw('comment_id, count(*) as total')->groupBy('comment_id')->pluck('total', 'comment_id');
+        $mine = DB::table('community_comment_reactions')->whereIn('comment_id', $ids)->where('user_id', $request->user()->id)->pluck('comment_id')->flip();
 
-        return response()->json(['data' => $items->getCollection()->map(fn ($comment) => ['id' => (string) $comment->id, 'author' => $comment->author->name, 'avatar' => '', 'text' => $comment->body, 'time' => $comment->created_at->diffForHumans()]), 'next_cursor' => $items->nextCursor()?->encode()]);
+        return response()->json(['data' => $items->getCollection()->map(fn ($comment) => ['id' => (string) $comment->id, 'author_id' => $comment->user_id, 'author' => $comment->author->name, 'avatar' => $comment->author->demoAvatarUrl(), 'text' => $comment->body, 'time' => $comment->created_at->diffForHumans(), 'likes' => (int) ($counts[$comment->id] ?? 0), 'liked' => $mine->has($comment->id)]), 'next_cursor' => $items->nextCursor()?->encode()]);
     }
 
     public function comment(Request $request, CommunityPost $post)

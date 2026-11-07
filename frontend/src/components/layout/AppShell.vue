@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
-import { RouterView, useRoute, type RouteLocationNormalizedLoaded } from 'vue-router'
+import { RouterView, useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router'
 import CommunityHeader from '../community/CommunityHeader.vue'
 import BottomNavigation from '../community/BottomNavigation.vue'
 import CommunityPanels, { type Panel } from '../community/CommunityPanels.vue'
@@ -10,6 +10,7 @@ import { provideProfileAvatar } from '../../composables/useProfileAvatar'
 const { neighborhood, activities } = provideCommunity()
 provideProfileAvatar()
 const route = useRoute()
+const router = useRouter()
 const animatedTabs = new Set<RouteLocationNormalizedLoaded['name']>([
   'home',
   'neighbors',
@@ -31,6 +32,7 @@ const compactHeader = computed(
 )
 
 function openPanel(value: Panel) {
+  if (value === 'messages') { void router.push('/mensajes'); return }
   panel.value = value
   if (value === 'notifications') unread.value = 0
 }

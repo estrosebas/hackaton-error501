@@ -1,0 +1,108 @@
+{
+  "source": "https://github.com/SelfishGene/SFHQ-dataset",
+  "mirror": "https://huggingface.co/datasets/pravsels/SFHQ_256/resolve/main/shard_10_of_86.zip",
+  "archive_sha256": "6029e014fafb7cbc089eaabffc8be10c878d83210be45884c9a835066db65ac8",
+  "description": "Photorealistic AI-generated SFHQ portraits, local demonstration only. Names and stories are fictional.",
+  "images": [
+    {
+      "file": "01.jpg",
+      "source_member": "SFHQ_pt1_00019961.jpg",
+      "sha256": "555881ab922817d39160648a5b0772d52983d3becbbb1354fdc17524e3da6c57"
+    },
+    {
+      "file": "02.jpg",
+      "source_member": "SFHQ_pt2_00056067.jpg",
+      "sha256": "31cd1054bb5662fa1b9be2322b1378c1c5383a1264d203f68da22d3c9878574f"
+    },
+    {
+      "file": "03.jpg",
+      "source_member": "SFHQ_pt4_00002633.jpg",
+      "sha256": "d727ae8ecef8b82b2ba63f7640b09ec721555daff44924e57de5be03e5dc8245"
+    },
+    {
+      "file": "04.jpg",
+      "source_member": "SFHQ_pt2_00001397.jpg",
+      "sha256": "09fa70c508dda2787fb8ec931526c2633b9199ce347949c382546471429d50a3"
+    },
+    {
+      "file": "05.jpg",
+      "source_member": "SFHQ_pt3_00040288.jpg",
+      "sha256": "e03b733b629d8230f5487fe263df9cb1b6d12e462d55392677b5d6fef2c9801b"
+    },
+    {
+      "file": "06.jpg",
+      "source_member": "SFHQ_pt3_00006092.jpg",
+      "sha256": "1d539aac17f09d04a08601e1a4c3b814445ba6d980d8a80f4f49e940e8d98901"
+    },
+    {
+      "file": "07.jpg",
+      "source_member": "SFHQ_pt3_00112334.jpg",
+      "sha256": "ba0f0cc3e263bf937268786a2eb473c0952ee37acdf2d40a844ad59a70e0daf0"
+    },
+    {
+      "file": "08.jpg",
+      "source_member": "SFHQ_pt2_00080334.jpg",
+      "sha256": "260a0a4d222fd8bf09196c667b6ad73c53d37ab219d0e1c13f3d53bb5cd19953"
+    },
+    {
+      "file": "09.jpg",
+      "source_member": "SFHQ_pt4_00024961.jpg",
+      "sha256": "e55408beb3b7411c34bf767c7fe8975a0463401597aeb3e87e90bd68c7007f39"
+    },
+    {
+      "file": "10.jpg",
+      "source_member": "SFHQ_pt1_00044785.jpg",
+      "sha256": "3b81b1a91e83f828eeaa28180307ac286c794f5abd05c526bcc0a77110d9efa0"
+    },
+    {
+      "file": "11.jpg",
+      "source_member": "SFHQ_pt3_00093696.jpg",
+      "sha256": "a6c68b6c2b80c371bc82f9325e4dfd43cd0e10544f3e7fc238db8a9f4b5353e2"
+    },
+    {
+      "file": "12.jpg",
+      "source_member": "SFHQ_pt2_00052876.jpg",
+      "sha256": "11ea5d70ca62a9126779763aea9e3ec4200e07fe84d21f1ab9c5bd6ae686f4be"
+    },
+    {
+      "file": "13.jpg",
+      "source_member": "SFHQ_pt4_00044414.jpg",
+      "sha256": "5c4b084e7b97c2a2123eb5f1bd85403a67aa97101ddf428b377b31d115836ff3"
+    },
+    {
+      "file": "14.jpg",
+      "source_member": "SFHQ_pt2_00021699.jpg",
+      "sha256": "f26a18db181896b168873a0f3d38657d51f9c98a0c4db16f46ab6f8e4ff46e54"
+    },
+    {
+      "file": "15.jpg",
+      "source_member": "SFHQ_pt1_00017726.jpg",
+      "sha256": "bb61d8e522ff9a500cff55da5ba159b619271c5741f7a0251767bd9c6a04408e"
+    },
+    {
+      "file": "16.jpg",
+      "source_member": "SFHQ_pt3_00063631.jpg",
+      "sha256": "50140ada879783294c6b72d98e592dc6070a5d20e2c23cccb0c57f756f47e1e9"
+    },
+    {
+      "file": "17.jpg",
+      "source_member": "SFHQ_pt1_00048407.jpg",
+      "sha256": "09c1b93f6f6d99ece48bdc1e7845e1400e8f9f5920a754b46264825a54b7f0e0"
+    },
+    {
+      "file": "18.jpg",
+      "source_member": "SFHQ_pt1_00067179.jpg",
+      "sha256": "f145e88631ed94e38ff62407cf2e15adf088dee9e801f4569a9767354c61e4cb"
+    },
+    {
+      "file": "19.jpg",
+      "source_member": "SFHQ_pt1_00078155.jpg",
+      "sha256": "0d5e7bbaa3a1dc9793187785781aa3fdac46ce3ef79b9732e8dc2c6dd5845f5d"
+    },
+    {
+      "file": "20.jpg",
+      "source_member": "SFHQ_pt3_00007084.jpg",
+      "sha256": "3258d5833b9c00ecba2f89040440dc07ec192b3ba5506bd0c911fed90cefaa83"
+    }
+  ]
+}

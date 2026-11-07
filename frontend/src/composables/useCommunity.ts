@@ -11,6 +11,9 @@ import { currentUser } from './useAuth'
 
 export interface Comment {
   id: string
+  author_id: number
+  likes: number
+  liked: boolean
   author: string
   avatar: string
   text: string
@@ -19,10 +22,12 @@ export interface Comment {
 
 export interface Post {
   id: string
+  author_id: number
   kind: string
   status: string
   owned: boolean
   tags: string[]
+  categories?: string[]
   comments_count: number
   author: string
   avatar: string
@@ -77,6 +82,7 @@ function createCommunity() {
     kind = ref(''),
     savedOnly = ref(false)
   const nextCursor = ref<string | null>(null)
+  const retryMore = ref(false)
   const pending = new Set<string>()
   let generation = 0
   function fail(e: unknown) {
@@ -99,6 +105,7 @@ function createCommunity() {
   async function loadPosts(more = false) {
     if (more && (loading.value || !nextCursor.value)) return
     const current = ++generation
+    retryMore.value = more
     loading.value = true
     error.value = ''
     const query = new URLSearchParams()
@@ -141,6 +148,25 @@ function createCommunity() {
     }
   }
   const commentCursors = ref<Record<string, string | null>>({})
+  async function toggleCommentLike(postId: string, commentId: string) {
+    const comment = posts.value
+      .find((p) => p.id === postId)
+      ?.comments.find((c) => c.id === commentId)
+    const key = `comment-like-${commentId}`
+    if (!comment || pending.has(key)) return
+    pending.add(key)
+    try {
+      const result = await api<{ likes: number; liked: boolean }>(
+        `/feed/${postId}/comments/${commentId}/reaction`,
+        { method: 'PUT', body: JSON.stringify({ selected: !comment.liked }) },
+      )
+      Object.assign(comment, result)
+    } catch (e) {
+      fail(e)
+    } finally {
+      pending.delete(key)
+    }
+  }
   async function moreComments(id: string) {
     const cursor = commentCursors.value[id],
       post = posts.value.find((p) => p.id === id)
@@ -198,18 +224,31 @@ function createCommunity() {
       done?.(false)
     }
   }
-  async function addPost(text: string, type: string, photos: Blob[], activity?: ActivityDetails) {
-    const fields = { body: text, kind: type, ...(activity && {
-      activity_title: activity.title,
-      activity_starts_at: activity.starts_at,
-      activity_location: activity.location,
-    }) }
+  async function addPost(
+    text: string,
+    type: string,
+    photos: Blob[],
+    activity?: ActivityDetails,
+  ) {
+    const fields = {
+      body: text,
+      kind: type,
+      ...(activity && {
+        activity_title: activity.title,
+        activity_starts_at: activity.starts_at,
+        activity_location: activity.location,
+      }),
+    }
     let body: BodyInit = JSON.stringify(fields)
     if (photos.length) {
       const form = new FormData()
       for (const [key, value] of Object.entries(fields)) form.set(key, value)
       for (const photo of photos) {
-        form.append('photos[]', photo, photo.type === 'image/webp' ? 'foto.webp' : 'foto.png')
+        form.append(
+          'photos[]',
+          photo,
+          photo.type === 'image/webp' ? 'foto.webp' : 'foto.png',
+        )
       }
       body = form
     }
@@ -244,7 +283,9 @@ function createCommunity() {
       await api(`/feed/${id}`, { method: 'DELETE' })
       posts.value = posts.value.filter((p) => p.id !== id)
       if (activities.value.some((activity) => activity.id === id)) {
-        activities.value = activities.value.filter((activity) => activity.id !== id)
+        activities.value = activities.value.filter(
+          (activity) => activity.id !== id,
+        )
         void loadActivities()
       }
     } catch (e) {
@@ -267,6 +308,8 @@ function createCommunity() {
     kind,
     savedOnly,
     nextCursor,
+    retryMore,
+    toggleCommentLike,
     loadPosts,
     loadComments,
     moreComments,

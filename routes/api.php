@@ -2,15 +2,23 @@
 
 use App\Http\Controllers\ApiSessionController;
 use App\Http\Controllers\AvatarController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CommentReactionController;
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\DemoAvatarController;
 use App\Http\Controllers\FacePhotoController;
 use App\Http\Controllers\MediaController;
+use App\Http\Controllers\NeighborController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegistrationCatalogController;
 use App\Http\Controllers\RegistrationController;
 use Illuminate\Support\Facades\Route;
 
+Route::pattern('room', '[0-9]+');
+Route::pattern('neighbor', '[0-9]+');
+
 Route::prefix('v1')->group(function () {
+    Route::get('demo/avatars/{filename}', DemoAvatarController::class)->where('filename', '(0[1-9]|1[0-9]|20)\.jpg');
     Route::post('identity/dni', [RegistrationCatalogController::class, 'identity'])->middleware('throttle:6,1');
     Route::get('locations/regions', [RegistrationCatalogController::class, 'regions']);
     Route::get('locations/regions/{region}/provinces', [RegistrationCatalogController::class, 'provinces'])->where('region', '[0-9]{2}');
@@ -21,10 +29,24 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/register', [RegistrationController::class, 'store'])->middleware('throttle:6,1');
     Route::post('auth/login', [ApiSessionController::class, 'store'])->middleware('throttle:6,1');
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('neighbors', [NeighborController::class, 'index']);
+        Route::get('neighbors/blocked', [NeighborController::class, 'blocks']);
+        Route::get('neighbors/{neighbor}', [NeighborController::class, 'show']);
+        Route::put('neighbors/{neighbor}/block', [NeighborController::class, 'block'])->middleware('throttle:30,1');
+        Route::get('rooms', [ChatController::class, 'index']);
+        Route::post('rooms/direct/{neighbor}', [ChatController::class, 'direct'])->middleware('throttle:20,1');
+        Route::post('rooms', [ChatController::class, 'store'])->middleware('throttle:10,1');
+        Route::get('rooms/{room}', [ChatController::class, 'show']);
+        Route::post('rooms/{room}/members', [ChatController::class, 'invite'])->middleware('throttle:20,1');
+        Route::delete('rooms/{room}/membership', [ChatController::class, 'leave']);
+        Route::get('rooms/{room}/messages', [ChatController::class, 'messages']);
+        Route::post('rooms/{room}/messages', [ChatController::class, 'send'])->middleware('throttle:60,1');
+        Route::put('rooms/{room}/read', [ChatController::class, 'read']);
         Route::get('feed', [CommunityController::class, 'index']);
         Route::post('feed', [CommunityController::class, 'store'])->middleware(['can:posts.create', 'throttle:6,1']);
         Route::get('feed/{post}/photo/{index?}', [CommunityController::class, 'photo'])->whereNumber('index');
         Route::get('feed/{post}/comments', [CommunityController::class, 'comments']);
+        Route::put('feed/{post}/comments/{comment}/reaction', CommentReactionController::class)->whereNumber('comment')->middleware('throttle:60,1');
         Route::post('feed/{post}/comments', [CommunityController::class, 'comment'])->middleware(['can:posts.create', 'throttle:20,1']);
         Route::put('feed/{post}/reaction', [CommunityController::class, 'reaction'])->middleware('throttle:60,1');
         Route::put('feed/{post}/bookmark', [CommunityController::class, 'bookmark'])->middleware('throttle:60,1');

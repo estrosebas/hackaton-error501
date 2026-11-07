@@ -48,6 +48,18 @@ export const router = createRouter({
           meta: { title: 'Vecinos', section: 'neighbors' },
         },
         {
+          path: 'vecinos/:neighborId',
+          name: 'neighbor-profile',
+          component: () => import('./views/NeighborView.vue'),
+          meta: { title: 'Perfil del vecino', section: 'neighbors' },
+        },
+        {
+          path: 'mensajes/:roomId?',
+          name: 'messages',
+          component: () => import('./views/ChatsView.vue'),
+          meta: { title: 'Conversaciones', section: 'home' },
+        },
+        {
           path: 'publicar',
           name: 'create',
           component: () => import('./views/PublishView.vue'),

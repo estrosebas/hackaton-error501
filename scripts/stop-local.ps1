@@ -21,6 +21,10 @@ foreach ($name in @('frontend','laravel','face')) {
         # A launcher can exit after its child is killed, making taskkill report
         # an already-exited parent. Verify the observed tree instead of its code.
         & taskkill.exe /PID $servicePid /T /F *> $null
+        # Process handles can remain visible briefly after taskkill returns.
+        foreach ($processId in $tree) {
+            Wait-Process -Id $processId -Timeout 5 -ErrorAction SilentlyContinue
+        }
         foreach ($processId in $tree) {
             if (Get-Process -Id $processId -ErrorAction SilentlyContinue) { throw "No se pudo detener $name (PID $processId)." }
         }
