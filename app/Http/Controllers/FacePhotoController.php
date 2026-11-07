@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\FaceEnrollment;
+use App\Services\FaceIdentityMatch;
 use App\Services\FacePhotoCheck;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +29,7 @@ class FacePhotoController extends Controller
         ]);
         $bytes = $checker->decode($data['foto']);
         $analysis = $checker->analyze($bytes, extract: true);
+        app(FaceIdentityMatch::class)->validate($request->user(), $analysis);
         $enrollment->save($request->user(), $bytes, $analysis);
 
         return response()->json(['message' => 'Tu fotografía se actualizó.', 'enrolled_at' => now()->toIso8601String()]);

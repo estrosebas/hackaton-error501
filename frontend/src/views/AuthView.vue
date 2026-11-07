@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { shallowRef } from 'vue'
+import { shallowRef, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { RouterLink, useRouter } from 'vue-router'
 import AuthForm from '../components/auth/AuthForm.vue'
 import RegistrationForm from '../components/auth/RegistrationForm.vue'
 import AppIcon from '../components/AppIcon.vue'
-import { endDemoSession, startDemoSession } from '../composables/useDemoSession'
+import { login, sessionError } from '../composables/useAuth'
 
-defineProps<{ mode: 'login' | 'register' }>()
+const props = defineProps<{ mode: 'login' | 'register' }>()
 const router = useRouter()
 const message = useMessage()
 const entering = shallowRef(false)
+watch(() => props.mode, () => { sessionError.value = '' })
 
 async function enterCommunity() {
   if (entering.value) return
@@ -25,7 +26,6 @@ async function enterCommunity() {
       : null
 
   entering.value = true
-  startDemoSession()
   try {
     await router.replace({
       ...(destination?.meta.requiresSession
@@ -34,11 +34,20 @@ async function enterCommunity() {
       state: { masiContinueTo: null },
     })
   } catch {
-    endDemoSession()
     message.error('No pudimos abrir tu barrio. Intenta de nuevo.')
   } finally {
     entering.value = false
   }
+}
+
+async function signIn(credentials: { dni: string; password: string }) {
+  if (entering.value) return
+  entering.value = true
+  sessionError.value = ''
+  try { await login(credentials) }
+  catch (error) { sessionError.value = error instanceof Error ? error.message : 'No pudimos iniciar sesión.'; return }
+  finally { entering.value = false }
+  await enterCommunity()
 }
 </script>
 
@@ -55,7 +64,7 @@ async function enterCommunity() {
           >masi<span class="brand-dot">.</span></span
         >
       </div>
-      <span class="auth-demo-badge">{{ mode === 'login' ? 'Modo demo' : 'Crear cuenta' }}</span>
+      <span class="auth-demo-badge">{{ mode === 'login' ? 'Bienvenido' : 'Crear cuenta' }}</span>
     </header>
 
     <div class="auth-hero">
@@ -87,8 +96,9 @@ async function enterCommunity() {
           :key="mode"
           :mode="mode"
           :busy="entering"
-          @submit="enterCommunity"
+          @submit="signIn"
         />
+        <p v-if="sessionError" class="session-error" role="alert">{{ sessionError }}</p>
         <p class="auth-switch">
           {{
             mode === 'login'
@@ -107,7 +117,7 @@ async function enterCommunity() {
       </section>
 
       <footer class="auth-footer">
-        <p>{{ mode === 'login' ? 'Prueba el acceso con un correo y una contraseña de ejemplo.' : 'Tus datos de registro y tu fotografía se guardan de forma privada.' }}</p>
+        <p>{{ mode === 'login' ? 'Ingresa con tu DNI y la contraseña que creaste al registrarte.' : 'Tus datos de registro y tu fotografía se guardan de forma privada.' }}</p>
         <a href="https://unsplash.com/photos/O1D1C4DL-H0">Foto de Will Goodman · Cusco</a>
       </footer>
     </div>
@@ -115,6 +125,7 @@ async function enterCommunity() {
 </template>
 
 <style scoped>
+.session-error { color: #ffb0c0; font-size: 13px; line-height: 1.5; }
 .auth-page {
   --auth-gutter: clamp(14px, 5vw, 24px);
   --auth-scrim-position: 46%;

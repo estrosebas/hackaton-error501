@@ -65,6 +65,8 @@ class User extends Authenticatable implements HasMedia
 
     public function registerMediaCollections(): void
     {
+        $this->addMediaCollection('avatar')->useDisk('local')->singleFile()
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
         $this->addMediaCollection('attachments')->useDisk('local')
             ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
     }

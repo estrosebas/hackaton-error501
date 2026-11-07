@@ -20,6 +20,7 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
   }
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
+    if (response.status === 401 && token && sessionStorage.getItem('masi.api.token') === token) clearSession()
     const errors = data.errors || {}
     throw new ApiError(Object.values(errors).flat().join(' ') || data.message || 'No pudimos completar la solicitud. Intenta nuevamente.', response.status, errors)
   }
@@ -28,4 +29,9 @@ export async function api<T = any>(path: string, options: RequestInit = {}): Pro
 export function saveSession(token: string, user: unknown) {
   sessionStorage.setItem('masi.api.token', token)
   sessionStorage.setItem('masi.api.user', JSON.stringify(user))
+}
+export function clearSession() {
+  sessionStorage.removeItem('masi.api.token')
+  sessionStorage.removeItem('masi.api.user')
+  window.dispatchEvent(new Event('masi:session-ended'))
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApiSessionController;
+use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\FacePhotoController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\ProfileController;
@@ -18,6 +19,8 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/register', [RegistrationController::class, 'store'])->middleware('throttle:6,1');
     Route::post('auth/login', [ApiSessionController::class, 'store'])->middleware('throttle:6,1');
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('profile/avatar', [AvatarController::class, 'show']);
+        Route::post('profile/avatar', [AvatarController::class, 'update'])->middleware(['can:profile.update', 'throttle:6,1']);
         Route::get('profile', [ProfileController::class, 'show']);
         Route::post('auth/logout', [ApiSessionController::class, 'destroy']);
         Route::patch('profile/location', [ProfileController::class, 'location'])->middleware('can:profile.update');

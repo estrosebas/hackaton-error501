@@ -11,7 +11,7 @@ import { NButton, NInput } from 'naive-ui'
 import AppIcon, { type IconName } from '../AppIcon.vue'
 
 const props = defineProps<{ mode: 'login' | 'register'; busy: boolean }>()
-const emit = defineEmits<{ submit: [] }>()
+const emit = defineEmits<{ submit: [credentials: { dni: string; password: string }] }>()
 
 const inputTheme = {
   color: 'transparent',
@@ -23,7 +23,7 @@ const inputTheme = {
   placeholderColor: 'var(--muted)',
 }
 
-const values = reactive({ name: '', email: '', password: '', confirmation: '' })
+const values = reactive({ name: '', dni: '', password: '', confirmation: '' })
 type FieldKey = keyof typeof values
 interface Field {
   key: FieldKey
@@ -37,18 +37,18 @@ interface Field {
 
 const credentials = computed<Field[]>(() => [
   {
-    key: 'email',
-    label: 'Correo electrónico',
-    icon: 'mail',
-    placeholder: 'vecina@ejemplo.com',
-    autocomplete: 'email',
-    maxLength: 254,
+    key: 'dni',
+    label: 'DNI',
+    icon: 'user',
+    placeholder: 'Tus 8 dígitos',
+    autocomplete: 'username',
+    maxLength: 8,
   },
   {
     key: 'password',
     label: 'Contraseña',
     icon: 'lock',
-    placeholder: '8 caracteres o más',
+    placeholder: props.mode === 'login' ? 'Tu contraseña' : '8 caracteres o más',
     autocomplete:
       props.mode === 'register' ? 'new-password' : 'current-password',
     secret: true,
@@ -86,11 +86,12 @@ const submitted = shallowRef(false)
 const form = useTemplateRef<HTMLFormElement>('auth-form')
 const errors = computed<Record<FieldKey, string>>(() => ({
   name: values.name.trim() ? '' : 'Escribe tu nombre.',
-  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())
+  dni: /^[0-9]{8}$/.test(values.dni.trim())
     ? ''
-    : 'Escribe un correo válido, como vecina@ejemplo.com.',
-  password:
-    values.password.trim().length >= 8 ? '' : 'Escribe al menos 8 caracteres.',
+    : 'Escribe los 8 dígitos de tu DNI.',
+  password: props.mode === 'login'
+    ? (values.password.length ? '' : 'Escribe tu contraseña.')
+    : (values.password.length >= 8 ? '' : 'Escribe al menos 8 caracteres.'),
   confirmation:
     values.confirmation && values.confirmation === values.password
       ? ''
@@ -111,7 +112,7 @@ async function submit() {
       ?.focus()
     return
   }
-  emit('submit')
+  emit('submit', { dni: values.dni.trim(), password: values.password })
 }
 </script>
 
@@ -134,7 +135,7 @@ async function submit() {
               :input-props="{
                 id: `auth-${field.key}`,
                 name: field.key,
-                ...(field.key === 'email' ? { type: 'email' } : {}),
+                ...(field.key === 'dni' ? { inputmode: 'numeric', pattern: '[0-9]{8}' } : {}),
                 autocomplete: field.autocomplete,
                 required: true,
                 'aria-invalid': Boolean(fieldError(field.key)),

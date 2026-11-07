@@ -2,7 +2,7 @@
 
 Aplicación Vue 3 separada de Laravel. Desde la raíz, scripts/start-local.ps1 inicia PostgreSQL, Python, Laravel y Vite. Abrir http://127.0.0.1:5173/registro.
 
-El registro consulta DNI, bloquea sus datos, carga región/provincia/distrito en cascada, pide ubicación actual y pasa a la captura biométrica. Crea la cuenta mediante /api/v1 y conserva el token durante la sesión de esta pestaña. Login y comunidad mantienen su comportamiento de demostración.
+El registro consulta DNI, bloquea sus datos, carga región/provincia/distrito en cascada, pide ubicación actual y pasa a la captura biométrica. Crea la cuenta mediante /api/v1 y conserva el token durante la sesión de esta pestaña. El login valida DNI y contraseña contra Laravel. La comunidad mantiene datos de demostración, pero sus vistas requieren una sesión real y vigente.
 
 npm run dev y npm run build preparan los recursos MediaPipe/ONNX desde ../public, verifican hashes y los incluyen en el build. Las copias generadas no se versionan. La cámara reutiliza los componentes derivados de Club Mejía; Laravel y Python vuelven a validar cada imagen.
 
@@ -22,8 +22,7 @@ npm ci
 npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
-Abre [el Mercadito](http://127.0.0.1:5173/mercadito). El acceso de demo acepta un
-correo con formato válido y una contraseña de ejemplo de al menos ocho caracteres.
+Abre [el Mercadito](http://127.0.0.1:5173/mercadito). El acceso requiere el DNI y la contraseña usados en el registro.
 Para verificar el compilado de producción, ejecuta `npm run build` en `frontend`.
 
 ## Datos que maneja el frontend hoy
@@ -33,7 +32,7 @@ conservan datos de demostración y su estado local mientras se conectan sus serv
 
 | Flujo | Datos que recoge o procesa el frontend | Comportamiento actual |
 | --- | --- | --- |
-| Inicio de sesión | `email`, `password` | Valida en el navegador. El evento `submit` no incluye credenciales y activa una sesión en memoria. |
+| Inicio de sesión | `dni`, `password` | Laravel valida las credenciales, emite un token Sanctum y el router verifica su vigencia con `/profile`. |
 | Registro | DNI, ticket de identidad, contacto, contraseña, UBIGEO, barrio, ubicación actual y foto | Consulta Scrall, bloquea los datos obtenidos y crea cuenta real mediante Laravel/Python. |
 | Publicar producto | `title`, `price`, `category`, `condition`, `description`, `image`, `neighborhood` | Emite `NewListing`. `image` es una URL de datos Base64 y `neighborhood` es el nombre visible del barrio. |
 | Explorar productos | Texto de búsqueda, zona `nearby` o `neighborhood`, vista general, propia o guardada | Filtra los datos en memoria. La búsqueda compara el título, la descripción y la categoría. |
@@ -57,9 +56,9 @@ rutas de navegación como `/mercadito/guardados` pertenecen a Vue Router.
 
 El contrato vigente de DNI, registro biométrico, perfil, ubicación, medios privados,
 roles y etiquetas está en [la documentación del backend](../docs/backend-api.md).
-La API usa tokens Bearer de Sanctum; el login del frontend sigue siendo de demo.
+La API usa tokens Bearer de Sanctum; el login del frontend usa las credenciales reales del registro.
 El registro conserva el token en sessionStorage durante la sesión de esta pestaña.
-No usar los contratos simplificados de demo para registrar cuentas reales.
+Cada navegación protegida valida `/profile`; también se revisa la sesión al volver a la pestaña, cada 30 segundos y en su fecha de vencimiento. Un 401 elimina el token local y vuelve al login. Cerrar sesión revoca el token actual en Laravel antes de eliminarlo de sessionStorage; si falla la conexión, se muestra un error y se permite reintentar.
 
 ### Mercadito
 

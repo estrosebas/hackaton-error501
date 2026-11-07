@@ -14,7 +14,7 @@ Base del proyecto de comunidad vecinal: Laravel 12, Vue 3, PostgreSQL y un micro
 
 La API de registro `/api/v1` ya integra Scrall: consulta DNI, genera un ticket cifrado de 10 minutos y toma los datos de la persona de ese ticket. El registro exige fotografía y ubicación actual; deriva región, provincia y distrito del catálogo en PostgreSQL. El contrato completo está en [docs/backend-api.md](docs/backend-api.md). La consulta no acredita que el rostro sea del titular, residencia, unicidad de persona ni prueba de vida/PAD. El servicio facial devuelve `liveness: not_evaluated`.
 
-La aplicación separada en `frontend/` tiene el registro conectado a `/api/v1`: consulta DNI, bloquea los datos obtenidos, carga selectores de ubicación en cascada, pide posición actual y completa la captura biométrica. Conserva el estilo del login de demostración. El login y las pantallas de comunidad aún son de demostración; el registro sí crea una cuenta real. La pantalla anterior en Laravel queda como referencia.
+La aplicación separada en `frontend/` tiene el registro conectado a `/api/v1`: consulta DNI, bloquea los datos obtenidos, carga selectores de ubicación en cascada, pide posición actual y completa la captura biométrica. Conserva el estilo del login de demostración. El login autentica por DNI y contraseña en Laravel. Las vistas requieren una sesión validada por el servidor; los contenidos de comunidad aún usan datos de demostración. La pantalla anterior en Laravel queda como referencia.
 
 El mapa, publicaciones, recomendaciones, intercambios, emergencias, modo offline y PostGIS quedan para las siguientes etapas. Los campos de coordenadas ya están preparados; PostgreSQL portable por ahora no incluye PostGIS.
 
@@ -26,7 +26,7 @@ Desde esta carpeta, con PowerShell:
 .\scripts\start-local.ps1
 ```
 
-Abrir [el registro del frontend](http://127.0.0.1:5173/registro) o [el login de demostración](http://127.0.0.1:5173/iniciar-sesion). Laravel escucha en el puerto 8000; Vite reenvía `/api` al backend.
+Abrir [el registro del frontend](http://127.0.0.1:5173/registro) o [el login](http://127.0.0.1:5173/iniciar-sesion). Laravel escucha en el puerto 8000; Vite reenvía `/api` al backend.
 
 ```powershell
 .\scripts\stop-local.ps1

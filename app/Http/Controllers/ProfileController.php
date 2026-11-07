@@ -12,7 +12,9 @@ class ProfileController extends Controller
 
         return response()->json(['user' => $user, 'roles' => $user->getRoleNames(),
             'permissions' => $user->getAllPermissions()->pluck('name'),
-            'face_enrolled' => $user->faceProfile()->exists()])->header('Cache-Control', 'no-store');
+            'face_enrolled' => $user->faceProfile()->exists(),
+            'expires_at' => $user->currentAccessToken()?->expires_at?->toIso8601String(),
+        ])->header('Cache-Control', 'no-store');
     }
 
     public function location(Request $request)

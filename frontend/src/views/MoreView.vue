@@ -1,23 +1,27 @@
 <script setup lang="ts">
-import { NAvatar } from 'naive-ui'
+import { NAvatar, useMessage } from 'naive-ui'
+import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
+import ProfilePhoto from '../components/auth/ProfilePhoto.vue'
 import type { Panel } from '../components/community/CommunityPanels.vue'
 import { useCommunity } from '../composables/useCommunity'
 import { useMarketplace } from '../composables/useMarketplace'
-import { endDemoSession } from '../composables/useDemoSession'
-import { api } from '../services/api'
+import { currentUser, logout } from '../composables/useAuth'
 const { neighborhood } = useCommunity()
 const { ownListings, favoriteIds } = useMarketplace()
 const emit = defineEmits<{ openPanel: [panel: Panel] }>()
 const router = useRouter()
+const signingOut = ref(false)
+const avatar = ref('')
+const message = useMessage()
 
 async function signOut() {
-  if (sessionStorage.getItem('masi.api.token')) {
-    try { await api('/auth/logout', { method: 'POST' }) } catch { /* Clear this device's session even if the server is unavailable. */ }
-  }
-  endDemoSession()
-  return router.replace({ name: 'login', state: { masiContinueTo: null } })
+  if (signingOut.value) return
+  signingOut.value = true
+  try { await logout(); await router.replace({ name: 'login', state: { masiContinueTo: null } }) }
+  catch { message.error('No pudimos cerrar la sesión en el servidor. Intenta nuevamente.') }
+  finally { signingOut.value = false }
 }
 </script>
 
@@ -37,12 +41,13 @@ async function signOut() {
       <NAvatar
         round
         :size="60"
-        src="/images/ana.jpg"
+        :src="avatar || undefined"
         :img-props="{ alt: '' }"
       /><span
-        ><strong>Ana</strong><small>Vecina de {{ neighborhood }}</small></span
+        ><strong>{{ currentUser?.name || 'Mi cuenta' }}</strong><small>{{ currentUser?.neighborhood || neighborhood }}</small></span
       ><AppIcon name="arrow" :size="20" />
     </button>
+    <ProfilePhoto @loaded="avatar = $event" />
     <div class="more-menu">
       <RouterLink
         class="sheet-row"
@@ -78,8 +83,8 @@ async function signOut() {
           ></span
         ><AppIcon name="arrow" :size="18" />
       </button>
-      <button class="sheet-row" type="button" @click="signOut">
-        <AppIcon name="arrow" /><span>Cerrar sesión</span>
+      <button class="sheet-row" type="button" :disabled="signingOut" @click="signOut">
+        <AppIcon name="arrow" /><span>{{ signingOut ? 'Cerrando sesión…' : 'Cerrar sesión' }}</span>
       </button>
     </div>
     <div class="about-masi">

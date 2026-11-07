@@ -1,6 +1,6 @@
 # Servicios de registro y perfil
 
-Base local: `http://127.0.0.1:8000/api/v1`. Enviar `Accept: application/json`. El frontend separado en `frontend/` conecta su registro a estos endpoints mediante el proxy Vite de `/api`. Conserva el login y la comunidad de demostración.
+Base local: `http://127.0.0.1:8000/api/v1`. Enviar `Accept: application/json`. El frontend separado en `frontend/` conecta su registro a estos endpoints mediante el proxy Vite de `/api`. El login usa DNI y contraseña registrados, valida la sesión con el servidor y protege las vistas. El contenido de la comunidad permanece de demostración.
 
 ## Registro
 
@@ -89,3 +89,9 @@ npm --prefix frontend run build
 Variables privadas: `SCRALL_BASE_URL=https://api.scrall.net` y `SCRALL_BASIC_TOKEN` con el valor base64 que sigue a Basic. La clave queda únicamente en `.env`, ignorado por Git. No copiarla a `.env.example` ni `.env.testing`.
 
 Pruebas: `php artisan test`. `FACE_LIVE_TEST=1` habilita la integración con el microservicio facial real usando un DNI sintético y ticket generado en la prueba; no gasta consultas Scrall. Las pruebas de Scrall usan su contrato HTTP simulado; la consulta real se valida por separado sin almacenar sus datos personales.
+
+El perfil devuelve `expires_at` del token actual. El cliente comprueba la sesión en cada navegación protegida, al recuperar foco, periódicamente y al vencer. Un 401 limpia el almacenamiento local. El logout revoca únicamente el token actual; otros dispositivos conservan su sesión.
+
+## Comparación facial al cambiar fotos
+
+El avatar nuevo requiere extracción SFace y comparación coseno con la plantilla cifrada del registro. El modelo y su huella deben coincidir; una referencia ausente, inválida o incompatible bloquea la actualización. FACE_MATCH_THRESHOLD configura el mínimo de similitud (0.5 por defecto, sujeto a calibración con capturas reales). Un rostro rechazado retorna 422 sin sustituir el avatar. Este control también se aplica al endpoint de actualización biométrica. La comparación es probabilística y no constituye prueba de vida.

@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { nextTick } from 'vue'
 import type { NavSection } from './components/community/BottomNavigation.vue'
-import { hasDemoSession } from './composables/useDemoSession'
+import { validateSession } from './composables/useAuth'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -105,7 +105,9 @@ export const router = createRouter({
   },
 })
 
-router.beforeEach((to) => {
+let navigating = false
+router.beforeEach(async (to) => {
+  navigating = true
   // Keep old bookmarks working while the app links to the new paths.
   if (to.name === 'create' && 'tipo' in to.query) {
     const { tipo, ...query } = to.query
@@ -125,7 +127,8 @@ router.beforeEach((to) => {
     }
   }
 
-  if (to.meta.requiresSession && !hasDemoSession()) {
+  const valid = (to.meta.requiresSession || to.meta.guestOnly) ? await validateSession() : false
+  if (to.meta.requiresSession && !valid) {
     return {
       name: 'login',
       state: { masiContinueTo: to.fullPath === '/inicio' ? null : to.fullPath },
@@ -133,7 +136,7 @@ router.beforeEach((to) => {
   }
 
   if (to.meta.guestOnly) {
-    if (hasDemoSession()) return { name: 'home', state: { masiContinueTo: null } }
+    if (valid) return { name: 'home', state: { masiContinueTo: null } }
 
     if ('continuar' in to.query) {
       const { continuar, ...query } = to.query
@@ -148,6 +151,7 @@ router.beforeEach((to) => {
 })
 
 router.afterEach(async (to, from, failure) => {
+  navigating = false
   if (failure) return
   document.title = `${to.meta.title ?? 'Tu barrio'} · masi`
   const sameSectionView =
@@ -158,4 +162,27 @@ router.afterEach(async (to, from, failure) => {
     await nextTick()
     document.getElementById('page-content')?.focus({ preventScroll: true })
   }
+})
+
+function sessionEnded() {
+  if (!navigating && router.currentRoute.value.meta.requiresSession) void router.replace({ name: 'login', state: { masiContinueTo: router.currentRoute.value.fullPath } })
+}
+window.addEventListener('masi:session-ended', sessionEnded)
+async function recheckSession() {
+  if (navigating || document.visibilityState !== 'visible' || !router.currentRoute.value.meta.requiresSession) return
+  if (!await validateSession() && router.currentRoute.value.meta.requiresSession) {
+    await router.replace({ name: 'login', state: { masiContinueTo: router.currentRoute.value.fullPath } })
+  }
+}
+function checkVisibleSession() { void recheckSession() }
+window.addEventListener('focus', checkVisibleSession)
+document.addEventListener('visibilitychange', checkVisibleSession)
+window.addEventListener('pageshow', checkVisibleSession)
+const sessionInterval = setInterval(() => { void recheckSession() }, 30000)
+if (import.meta.hot) import.meta.hot.dispose(() => {
+  clearInterval(sessionInterval)
+  window.removeEventListener('masi:session-ended', sessionEnded)
+  window.removeEventListener('focus', checkVisibleSession)
+  document.removeEventListener('visibilitychange', checkVisibleSession)
+  window.removeEventListener('pageshow', checkVisibleSession)
 })
