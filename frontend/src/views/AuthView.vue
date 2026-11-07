@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { shallowRef, watch } from 'vue'
+import { onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { RouterLink, useRouter } from 'vue-router'
 import AuthForm from '../components/auth/AuthForm.vue'
@@ -11,7 +11,35 @@ const props = defineProps<{ mode: 'login' | 'register' }>()
 const router = useRouter()
 const message = useMessage()
 const entering = shallowRef(false)
+const authContent = useTemplateRef<HTMLElement>('authContent')
+const revealPending = shallowRef(false)
+let revealObserver: IntersectionObserver | undefined
+
 watch(() => props.mode, () => { sessionError.value = '' })
+
+function revealAuthContent() {
+  revealPending.value = false
+  revealObserver?.disconnect()
+}
+
+onMounted(() => {
+  const content = authContent.value
+  if (
+    !content ||
+    typeof IntersectionObserver === 'undefined' ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return
+  }
+
+  revealObserver = new IntersectionObserver(([entry]) => {
+    if (entry?.isIntersecting) revealAuthContent()
+  })
+  revealPending.value = true
+  revealObserver.observe(content)
+})
+
+onUnmounted(() => revealObserver?.disconnect())
 
 async function enterCommunity() {
   if (entering.value) return
@@ -79,48 +107,52 @@ async function signIn(credentials: { dni: string; password: string }) {
       <p>Tu barrio, más cerca.</p>
     </div>
 
-    <div class="auth-content">
-      <section class="auth-card" aria-labelledby="auth-title">
-        <header class="auth-intro">
-          <h1 id="auth-title">{{ mode === 'login' ? 'Inicia sesión' : 'Únete a masi' }}</h1>
-          <p>
-            {{
-              mode === 'login'
-                ? 'Descubre qué está pasando cerca de ti.'
-                : 'Conoce a tus vecinos y comparte con tu barrio.'
-            }}
-          </p>
-        </header>
-        <RegistrationForm v-if="mode === 'register'" @registered="enterCommunity" />
-        <AuthForm v-else
-          :key="mode"
-          :mode="mode"
-          :busy="entering"
-          @submit="signIn"
-        />
-        <p v-if="sessionError" class="session-error" role="alert">{{ sessionError }}</p>
-        <p class="auth-switch">
+    <section
+      ref="authContent"
+      class="auth-content"
+      :class="{ 'auth-content--pending': revealPending }"
+      aria-labelledby="auth-title"
+      @focusin="revealAuthContent"
+    >
+      <header class="auth-intro">
+        <h1 id="auth-title">{{ mode === 'login' ? 'Inicia sesión' : 'Únete a masi' }}</h1>
+        <p>
           {{
             mode === 'login'
-              ? '¿Primera vez en masi?'
-              : '¿Ya tienes una cuenta?'
+              ? 'Descubre qué está pasando cerca de ti.'
+              : 'Conoce a tus vecinos y comparte con tu barrio.'
           }}
-          <RouterLink
-            :to="{
-              name: mode === 'login' ? 'register' : 'login',
-              state: { masiContinueTo: router.options.history.state.masiContinueTo ?? null },
-            }"
-          >
-            {{ mode === 'login' ? 'Crea tu cuenta' : 'Inicia sesión' }}
-          </RouterLink>
         </p>
-      </section>
+      </header>
+      <RegistrationForm v-if="mode === 'register'" @registered="enterCommunity" />
+      <AuthForm v-else
+        :key="mode"
+        :mode="mode"
+        :busy="entering"
+        @submit="signIn"
+      />
+      <p v-if="sessionError" class="session-error" role="alert">{{ sessionError }}</p>
+      <p class="auth-switch">
+        {{
+          mode === 'login'
+            ? '¿Primera vez en masi?'
+            : '¿Ya tienes una cuenta?'
+        }}
+        <RouterLink
+          :to="{
+            name: mode === 'login' ? 'register' : 'login',
+            state: { masiContinueTo: router.options.history.state.masiContinueTo ?? null },
+          }"
+        >
+          {{ mode === 'login' ? 'Crea tu cuenta' : 'Inicia sesión' }}
+        </RouterLink>
+      </p>
+    </section>
 
-      <footer class="auth-footer">
-        <p>{{ mode === 'login' ? 'Ingresa con tu DNI y la contraseña que creaste al registrarte.' : 'Tus datos de registro y tu fotografía se guardan de forma privada.' }}</p>
-        <a href="https://unsplash.com/photos/O1D1C4DL-H0">Foto de Will Goodman · Cusco</a>
-      </footer>
-    </div>
+    <footer class="auth-footer">
+      <p>{{ mode === 'login' ? 'Ingresa con tu DNI y la contraseña que creaste al registrarte.' : 'Tus datos de registro y tu fotografía se guardan de forma privada.' }}</p>
+      <a href="https://unsplash.com/photos/O1D1C4DL-H0">Foto de Will Goodman · Cusco</a>
+    </footer>
   </main>
 </template>
 
@@ -170,6 +202,8 @@ async function signIn(credentials: { dni: string; password: string }) {
   font-weight: 800;
 }
 .auth-hero {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -216,18 +250,44 @@ async function signIn(credentials: { dni: string; password: string }) {
   text-shadow: 0 2px 12px #090c18;
 }
 .auth-content {
-  padding-inline: var(--auth-gutter);
-}
-.auth-card {
+  position: relative;
+  z-index: 0;
   padding: clamp(15px, 5vw, 24px);
-  border-radius: 16px;
-  background: linear-gradient(150deg, var(--surface-raised), var(--surface));
+  padding-inline: calc(var(--auth-gutter) + clamp(15px, 5vw, 24px));
+}
+.auth-content::before {
+  position: absolute;
+  z-index: -1;
+  inset: -48px 0 0;
+  background: linear-gradient(150deg, #2b314ae8, #101426e6 82%);
+  mask-image: linear-gradient(
+    transparent,
+    rgb(0 0 0 / 14%) 40px,
+    rgb(0 0 0 / 52%) 92px,
+    #000 152px,
+    #000 calc(100% - 100px),
+    rgb(0 0 0 / 20%) calc(100% - 24px),
+    transparent
+  );
+  pointer-events: none;
+  content: '';
 }
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .auth-card {
-    background: linear-gradient(150deg, #2b314ae8, #101426e6 82%);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
+  .auth-content::before {
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .auth-content:not(:focus-within) {
+    transition:
+      opacity 640ms ease-in-out,
+      transform 640ms cubic-bezier(0.25, 0.55, 0.35, 1);
+  }
+  .auth-content--pending:not(:focus-within) {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: none;
   }
 }
 .auth-intro {
@@ -263,7 +323,7 @@ async function signIn(credentials: { dni: string; password: string }) {
   text-underline-offset: 3px;
 }
 .auth-footer {
-  margin-top: 12px;
+  margin: 12px var(--auth-gutter) 0;
   color: var(--muted);
   text-align: center;
   font-size: 12px;

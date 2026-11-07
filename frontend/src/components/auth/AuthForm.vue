@@ -8,7 +8,7 @@ import {
   type InputHTMLAttributes,
 } from 'vue'
 import { NButton, NInput } from 'naive-ui'
-import AppIcon, { type IconName } from '../AppIcon.vue'
+import AppIcon from '../AppIcon.vue'
 
 const props = defineProps<{ mode: 'login' | 'register'; busy: boolean }>()
 const emit = defineEmits<{ submit: [credentials: { dni: string; password: string }] }>()
@@ -18,8 +18,8 @@ const inputTheme = {
   colorHover: 'transparent',
   colorFocus: 'transparent',
   fontSizeLarge: '16px',
-  heightLarge: '26px',
-  paddingLarge: '0 0',
+  heightLarge: '46px',
+  paddingLarge: '0 2px',
   placeholderColor: 'var(--muted)',
 }
 
@@ -28,7 +28,6 @@ type FieldKey = keyof typeof values
 interface Field {
   key: FieldKey
   label: string
-  icon: IconName
   placeholder: string
   autocomplete: InputHTMLAttributes['autocomplete']
   secret?: boolean
@@ -39,7 +38,6 @@ const credentials = computed<Field[]>(() => [
   {
     key: 'dni',
     label: 'DNI',
-    icon: 'user',
     placeholder: 'Tus 8 dígitos',
     autocomplete: 'username',
     maxLength: 8,
@@ -47,7 +45,6 @@ const credentials = computed<Field[]>(() => [
   {
     key: 'password',
     label: 'Contraseña',
-    icon: 'lock',
     placeholder: props.mode === 'login' ? 'Tu contraseña' : '8 caracteres o más',
     autocomplete:
       props.mode === 'register' ? 'new-password' : 'current-password',
@@ -61,7 +58,6 @@ const fields = computed<Field[]>(() =>
         {
           key: 'name',
           label: 'Nombre',
-          icon: 'user',
           placeholder: '¿Cómo te llamas?',
           autocomplete: 'name',
           maxLength: 80,
@@ -70,7 +66,6 @@ const fields = computed<Field[]>(() =>
         {
           key: 'confirmation',
           label: 'Confirma tu contraseña',
-          icon: 'lock',
           placeholder: 'Repite tu contraseña',
           autocomplete: 'new-password',
           secret: true,
@@ -121,7 +116,6 @@ async function submit() {
     <div class="auth-fields">
       <div v-for="field in fields" :key="field.key" class="auth-field">
         <div class="auth-field-row">
-          <AppIcon class="auth-field-icon" :name="field.icon" :size="19" />
           <div class="auth-field-value">
             <label :for="`auth-${field.key}`">{{ field.label }}</label>
             <NInput
@@ -188,43 +182,40 @@ async function submit() {
   gap: 16px;
 }
 .auth-fields {
-  border-radius: 14px;
-  background: #10142699;
+  display: grid;
+  gap: 16px;
 }
 .auth-field-row {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 10px;
-  min-height: 58px;
-  padding: 6px 8px 6px 13px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  padding-block-end: 1px;
+  border-bottom: 1px solid #a5acc78f;
 }
-.auth-field + .auth-field .auth-field-row::before {
-  position: absolute;
-  inset: 0 13px auto 42px;
-  height: 1px;
-  background: #ffffff16;
-  content: '';
-}
-.auth-field:first-child .auth-field-row {
-  border-radius: 13px 13px 0 0;
-}
-.auth-field:last-child:not(:has(.auth-error)) .auth-field-row {
-  border-radius: 0 0 13px 13px;
+.auth-field-row:has([aria-invalid='true']) {
+  border-bottom-color: #ff9cab;
 }
 .auth-field-row:focus-within {
-  outline: 2px solid var(--coral);
-  outline-offset: -2px;
+  padding-block-end: 0;
+  border-bottom-width: 2px;
+  border-bottom-color: var(--coral);
 }
-.auth-field-icon {
-  color: var(--lavender);
+@media (forced-colors: active) {
+  .auth-field-row:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+}
+.auth-field-value {
+  display: grid;
+  gap: 3px;
 }
 .auth-field label {
   display: block;
   color: var(--text);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.25;
   cursor: text;
 }
@@ -237,9 +228,6 @@ async function submit() {
 .password-toggle {
   position: relative;
   z-index: 1;
-}
-.auth-field-value :deep(.n-input__placeholder) {
-  font-size: 14px;
 }
 .password-toggle {
   display: grid;
@@ -260,12 +248,8 @@ async function submit() {
     background: var(--surface-raised);
   }
 }
-.auth-field-row:has([aria-invalid='true']) .auth-field-icon {
-  color: #ff9cab;
-}
 .auth-error {
-  margin: 0;
-  padding: 0 12px 8px 42px;
+  margin: 6px 0 0;
   color: #ff9cab;
   font-size: 12px;
   line-height: 1.4;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
-import { RouterView, useRoute } from 'vue-router'
+import { RouterView, useRoute, type RouteLocationNormalizedLoaded } from 'vue-router'
 import CommunityHeader from '../community/CommunityHeader.vue'
 import BottomNavigation from '../community/BottomNavigation.vue'
 import CommunityPanels, { type Panel } from '../community/CommunityPanels.vue'
@@ -8,6 +8,12 @@ import { provideCommunity, type Activity } from '../../composables/useCommunity'
 
 const { neighborhood } = provideCommunity()
 const route = useRoute()
+const animatedTabs = new Set<RouteLocationNormalizedLoaded['name']>([
+  'home',
+  'neighbors',
+  'market',
+  'more',
+])
 const panel = shallowRef<Panel | null>(null)
 const unread = shallowRef(3)
 const selectedActivity = shallowRef<Activity | null>(null)
@@ -36,6 +42,10 @@ function toggleInterest(id: string) {
     : [...interested.value, id]
 }
 
+function removePreviousView(_element: Element, done: () => void) {
+  done()
+}
+
 watch(
   () => route.fullPath,
   () => {
@@ -54,12 +64,18 @@ watch(
       @open="openPanel"
     />
     <main id="page-content" class="community-content" tabindex="-1">
-      <RouterView v-slot="{ Component }">
-        <component
-          :is="Component"
-          @open-panel="openPanel"
-          @select-activity="selectActivity"
-        />
+      <RouterView v-slot="{ Component, route: viewRoute }">
+        <Transition
+          name="community-tab"
+          :css="animatedTabs.has(viewRoute.name)"
+          @leave="removePreviousView"
+        >
+          <component
+            :is="Component"
+            @open-panel="openPanel"
+            @select-activity="selectActivity"
+          />
+        </Transition>
       </RouterView>
     </main>
     <BottomNavigation :active="activeNav" />
@@ -75,3 +91,22 @@ watch(
     />
   </div>
 </template>
+
+<style scoped>
+@media (prefers-reduced-motion: no-preference) {
+  .community-tab-enter-active {
+    animation: community-tab-in 240ms cubic-bezier(0.22, 0.7, 0.25, 1);
+  }
+
+  @keyframes community-tab-in {
+    from {
+      opacity: 0.65;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+</style>
