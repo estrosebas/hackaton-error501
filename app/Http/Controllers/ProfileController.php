@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\NeighborProfileRules;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -28,5 +31,24 @@ class ProfileController extends Controller
         $request->user()->update($data);
 
         return response()->json(['message' => 'Ubicación actualizada.'])->header('Cache-Control', 'no-store');
+    }
+
+    public function updatePresentation(Request $request)
+    {
+        $changes = $request->validate(NeighborProfileRules::rules(required: true))['neighbor_profile'];
+        if (array_key_exists('can_help', $changes)) {
+            $changes['can_help'] = (bool) $changes['can_help'];
+        }
+        $userId = $request->user()->getKey();
+
+        $profile = DB::transaction(function () use ($userId, $changes) {
+            $user = User::query()->lockForUpdate()->findOrFail($userId);
+            $profile = array_replace($user->neighbor_profile ?? [], $changes);
+            $user->update(['neighbor_profile' => $profile]);
+
+            return $profile;
+        });
+
+        return response()->json(['data' => $profile])->header('Cache-Control', 'no-store');
     }
 }

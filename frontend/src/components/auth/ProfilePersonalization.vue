@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onScopeDispose, shallowRef } from 'vue'
+import { computed, onMounted, onScopeDispose, shallowRef, useId } from 'vue'
 import { NInput, NSwitch } from 'naive-ui'
 import AppIcon from '../AppIcon.vue'
 import AppSelect from '../AppSelect.vue'
@@ -7,15 +7,18 @@ import ProfileTagChoices from './ProfileTagChoices.vue'
 import type { NeighborProfile } from '../../composables/useAuth'
 import { api } from '../../services/api'
 
-defineProps<{ disabled: boolean }>()
+defineProps<{ disabled: boolean; hideHeading?: boolean }>()
 const profile = defineModel<NeighborProfile>({ required: true })
+const bioId = useId()
+const helpId = useId()
 const catalog = shallowRef<{ skills: string[]; interests: string[]; availability: string[] }>()
 const failed = shallowRef(false)
 const request = new AbortController()
-const availabilityOptions = computed(() => [
-  { label: 'Sin indicar', value: '' },
-  ...(catalog.value?.availability ?? []).map(value => ({ label: value, value })),
-])
+const availabilityOptions = computed(() => {
+  const values = new Set(catalog.value?.availability)
+  if (profile.value.availability) values.add(profile.value.availability)
+  return [{ label: 'Sin indicar', value: '' }, ...Array.from(values, value => ({ label: value, value }))]
+})
 
 function update<K extends keyof NeighborProfile>(key: K, value: NeighborProfile[K]) {
   profile.value = { ...profile.value, [key]: value }
@@ -37,16 +40,16 @@ onScopeDispose(() => request.abort())
 
 <template>
   <div class="profile-personalization">
-    <header class="personalize-heading">
+    <header v-if="!hideHeading" class="personalize-heading">
       <h2>Personaliza tu cuenta</h2>
       <p>Cuéntanos qué te gusta y cómo quieres participar en el barrio. Todo es opcional.</p>
     </header>
 
     <div class="personalize-field">
-      <label for="profile-bio">Un poquito sobre mí</label>
+      <label :for="bioId">Un poquito sobre mí</label>
       <NInput
         :value="profile.bio ?? ''"
-        :input-props="{ id: 'profile-bio' }"
+        :input-props="{ id: bioId }"
         type="textarea"
         placeholder="Me gusta cuidar plantas y conocer a las personas que viven cerquita."
         :autosize="{ minRows: 3, maxRows: 6 }"
@@ -93,11 +96,11 @@ onScopeDispose(() => request.abort())
 
     <div class="personalize-help">
       <div>
-        <label for="profile-can-help">Puedo ayudar</label>
+        <label :for="helpId">Puedo ayudar</label>
         <p>Muéstralo en tu perfil cuando tengas tiempo para echar una mano.</p>
       </div>
       <NSwitch
-        id="profile-can-help"
+        :id="helpId"
         :value="profile.can_help"
         :disabled="disabled"
         aria-label="Puedo ayudar"

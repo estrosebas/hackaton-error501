@@ -52,6 +52,7 @@ Todas las rutas de esta tabla se agregan a `/api/v1`.
 | POST | /auth/logout | Bearer; revoca el token actual |
 | GET | /profile | Bearer; perfil, roles, permisos y estado de foto propios |
 | PATCH | /profile/location | Bearer y profile.update; latitude, longitude, location_captured_at y accuracy opcional |
+| PATCH | /profile/presentation | Bearer y profile.update. Actualiza la presentación de la cuenta autenticada. |
 | GET | /profile/photo | Bearer; foto biométrica propia privada |
 | POST | /profile/photo | Bearer y profile.update, 6/min; foto + biometric_consent |
 | GET | /media | Bearer; adjuntos propios |
@@ -88,6 +89,8 @@ UBIGEO procede de [RitchieRD/ubigeos-peru-data](https://github.com/RitchieRD/ubi
 - `can_help`: booleano que indica si la persona quiere mostrar que puede ayudar.
 
 El servidor conserva esta selección y la devuelve al titular en `GET /profile`. Las cuentas anteriores y los registros que omiten el paso pueden tener `neighbor_profile` nulo.
+
+`PATCH /profile/presentation` recibe los campos que cambian dentro de `neighbor_profile` y devuelve el perfil actualizado en `data`. Para borrar una selección envía `[]` en `skills` o `interests`, `null` en `bio` o `availability`, o `false` en `can_help`. Los campos omitidos conservan su valor.
 
 ## Feed comunitario
 

@@ -701,58 +701,6 @@ svg {
   white-space: nowrap;
   border: 0;
 }
-.profile-summary {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 22px 16px;
-  border: 0;
-  border-radius: 14px;
-  color: var(--text);
-  background: var(--surface-raised);
-  text-align: left;
-}
-.profile-summary > span:not(.n-avatar) {
-  flex: 1;
-}
-.profile-summary strong {
-  display: block;
-  font-size: 22px;
-  font-weight: 900;
-}
-.profile-summary small {
-  display: block;
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.more-menu {
-  margin-block: 22px;
-}
-.more-menu a {
-  text-decoration: none;
-}
-.about-masi {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 8px;
-  color: var(--coral);
-  text-align: center;
-}
-.about-masi > strong {
-  margin-top: 5px;
-  font-size: 30px;
-  font-weight: 900;
-  letter-spacing: -0.8px;
-}
-.about-masi p {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.8;
-}
 @media (max-width: 359px) {
   .wordmark {
     font-size: 32px;
