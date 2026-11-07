@@ -55,6 +55,7 @@ Route::prefix('v1')->group(function () {
         Route::get('profile/avatar', [AvatarController::class, 'show']);
         Route::post('profile/avatar', [AvatarController::class, 'update'])->middleware(['can:profile.update', 'throttle:6,1']);
         Route::get('profile', [ProfileController::class, 'show']);
+        Route::patch('profile/presentation', [ProfileController::class, 'updatePresentation'])->middleware('can:profile.update');
         Route::post('auth/logout', [ApiSessionController::class, 'destroy']);
         Route::patch('profile/location', [ProfileController::class, 'location'])->middleware('can:profile.update');
         Route::post('profile/photo', [FacePhotoController::class, 'update'])->middleware(['can:profile.update', 'throttle:6,1']);

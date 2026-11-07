@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\NeighborProfileRules;
 use App\Models\User;
 use App\Services\FaceEnrollment;
 use App\Services\FacePhotoCheck;
@@ -9,7 +10,6 @@ use App\Services\IdentityTicket;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 
 class RegistrationController extends Controller
@@ -30,14 +30,7 @@ class RegistrationController extends Controller
             'location_captured_at' => ['required', 'date', 'before_or_equal:now', 'after:-30 minutes'],
             'biometric_consent' => ['required', 'accepted'],
             'foto' => ['required', 'string', 'max:5600000'],
-            'neighbor_profile' => ['nullable', 'array:bio,skills,interests,availability,can_help'],
-            'neighbor_profile.bio' => ['nullable', 'string', 'max:280'],
-            'neighbor_profile.skills' => ['array', 'list', 'max:5'],
-            'neighbor_profile.skills.*' => ['required', 'string', 'distinct', Rule::in(config('neighbor-profile.skills'))],
-            'neighbor_profile.interests' => ['array', 'list', 'max:5'],
-            'neighbor_profile.interests.*' => ['required', 'string', 'distinct', Rule::in(config('neighbor-profile.interests'))],
-            'neighbor_profile.availability' => ['nullable', 'string', Rule::in(config('neighbor-profile.availability'))],
-            'neighbor_profile.can_help' => ['boolean'],
+            ...NeighborProfileRules::rules(),
         ]);
         $identity = $tickets->read($data['identity_token'], $data['dni']);
         $location = DB::table('districts as d')->join('provinces as p', 'p.code', '=', 'd.province_code')

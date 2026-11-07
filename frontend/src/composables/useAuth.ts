@@ -68,6 +68,25 @@ export async function login(credentials: { dni: string; password: string }) {
   sessionError.value = ''
 }
 
+export async function updateNeighborProfile(changes: Partial<NeighborProfile>) {
+  const token = sessionStorage.getItem('masi.api.token')
+  const userId = currentUser.value?.id
+  if (!token || userId === undefined) return false
+
+  const { data } = await api<{ data: Partial<NeighborProfile> }>('/profile/presentation', {
+    method: 'PATCH',
+    body: JSON.stringify({ neighbor_profile: changes }),
+  })
+  // A session check already in flight may have read the old profile.
+  if (pending?.token === token) await pending.request
+
+  if (sessionStorage.getItem('masi.api.token') !== token || currentUser.value?.id !== userId) return false
+  const user = { ...currentUser.value, neighbor_profile: data }
+  currentUser.value = user
+  saveSession(token, user)
+  return true
+}
+
 export async function logout() {
   try {
     if (sessionStorage.getItem('masi.api.token')) await api('/auth/logout', { method: 'POST' })

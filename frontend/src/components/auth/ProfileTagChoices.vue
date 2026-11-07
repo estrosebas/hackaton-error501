@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import AppIcon, { type IconName } from '../AppIcon.vue'
 
-defineProps<{ label: string; icon: IconName; options: string[]; disabled: boolean }>()
+const props = defineProps<{ label: string; icon: IconName; options: string[]; disabled: boolean }>()
 const selected = defineModel<string[]>({ required: true })
 const limit = 5
+const choices = computed(() => [...new Set([...props.options, ...selected.value])])
 
 function toggle(option: string) {
   if (selected.value.includes(option)) {
@@ -19,7 +21,7 @@ function toggle(option: string) {
     <legend><AppIcon :name="icon" :size="16" /> {{ label }}</legend>
     <div class="tag-choices-list">
       <button
-        v-for="option in options"
+        v-for="option in choices"
         :key="option"
         type="button"
         class="profile-tag"

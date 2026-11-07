@@ -57,7 +57,7 @@ export const router = createRouter({
           path: 'mensajes/:roomId?',
           name: 'messages',
           component: () => import('./views/ChatsView.vue'),
-          meta: { title: 'Conversaciones', section: 'home' },
+          meta: { title: 'Mensajes', section: 'home' },
         },
         {
           path: 'publicar',
@@ -105,7 +105,7 @@ export const router = createRouter({
           path: 'mas',
           name: 'more',
           component: () => import('./views/MoreView.vue'),
-          meta: { title: 'Más', section: 'more' },
+          meta: { title: 'Mi perfil', section: 'more' },
         },
         {
           path: ':pathMatch(.*)*',

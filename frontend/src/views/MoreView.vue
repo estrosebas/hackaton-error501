@@ -1,93 +1,119 @@
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
-import { ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, shallowRef } from 'vue'
+import { useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
-import ProfilePhoto from '../components/auth/ProfilePhoto.vue'
 import CurrentUserAvatar from '../components/auth/CurrentUserAvatar.vue'
-import type { Panel } from '../components/community/CommunityPanels.vue'
+import ProfilePhoto from '../components/auth/ProfilePhoto.vue'
+import ProfileEditor from '../components/profile/ProfileEditor.vue'
+import ProfileIdentity from '../components/profile/ProfileIdentity.vue'
+import ProfilePage from '../components/profile/ProfilePage.vue'
+import ProfileShortcuts from '../components/profile/ProfileShortcuts.vue'
+import { currentUser, logout } from '../composables/useAuth'
 import { useCommunity } from '../composables/useCommunity'
 import { useMarketplace } from '../composables/useMarketplace'
-import { currentUser, logout } from '../composables/useAuth'
+
+const emit = defineEmits<{ openPanel: [panel: 'activities' | 'neighborhood'] }>()
 const { neighborhood } = useCommunity()
 const { ownListings, favoriteIds } = useMarketplace()
-const emit = defineEmits<{ openPanel: [panel: Panel] }>()
+const district = computed(() => currentUser.value?.neighborhood || neighborhood.value)
 const router = useRouter()
-const signingOut = ref(false)
+const signingOut = shallowRef(false)
 const message = useMessage()
 
 async function signOut() {
   if (signingOut.value) return
   signingOut.value = true
-  try { await logout(); await router.replace({ name: 'login', state: { masiContinueTo: null } }) }
-  catch { message.error('No pudimos cerrar la sesión en el servidor. Intenta nuevamente.') }
-  finally { signingOut.value = false }
+  try {
+    await logout()
+    await router.replace({ name: 'login', state: { masiContinueTo: null } })
+  } catch {
+    message.error('No pudimos cerrar la sesión. Revisa tu conexión e inténtalo de nuevo.')
+  } finally {
+    signingOut.value = false
+  }
 }
 </script>
 
 <template>
-  <section class="standard-page more-page">
-    <div class="page-heading">
-      <div>
-        <h1>Tu rincón en masi</h1>
-        <p>Todo lo que te conecta con tu comunidad.</p>
-      </div>
-    </div>
-    <button
-      class="profile-summary"
-      type="button"
-      @click="emit('openPanel', 'profile')"
-    >
-      <CurrentUserAvatar :size="60" /><span
-        ><strong>{{ currentUser?.name || 'Mi cuenta' }}</strong><small>{{ currentUser?.neighborhood || neighborhood }}</small></span
-      ><AppIcon name="arrow" :size="20" />
-    </button>
-    <ProfilePhoto />
-    <div class="more-menu">
-      <RouterLink
-        class="sheet-row"
-        :to="{ name: 'market-mine' }"
-        ><AppIcon name="shop" /><span
-          >Mis anuncios<small
-            >{{ ownListings.length }} {{ ownListings.length === 1 ? 'producto publicado' : 'productos publicados' }}</small
-          ></span
-        ><AppIcon name="arrow" :size="18" /></RouterLink
-      ><RouterLink
-        class="sheet-row"
-        :to="{ name: 'market-saved' }"
-        ><AppIcon name="bookmark" /><span
-          >Productos guardados<small
-            >{{ favoriteIds.length }} {{ favoriteIds.length === 1 ? 'favorito' : 'favoritos' }} del mercadito</small
-          ></span
-        ><AppIcon name="arrow" :size="18" /></RouterLink
-      ><button
-        class="sheet-row"
-        type="button"
-        @click="emit('openPanel', 'activities')"
-      >
-        <AppIcon name="calendar" /><span>Planes del barrio</span
-        ><AppIcon name="arrow" :size="18" /></button
-      ><button
-        class="sheet-row"
-        type="button"
-        @click="emit('openPanel', 'neighborhood')"
-      >
-        <AppIcon name="pin" /><span
-          >Cambiar de barrio<small
-            >{{ neighborhood }} y alrededores</small
-          ></span
-        ><AppIcon name="arrow" :size="18" />
-      </button>
-      <button class="sheet-row" type="button" :disabled="signingOut" @click="signOut">
-        <AppIcon name="arrow" /><span>{{ signingOut ? 'Cerrando sesión…' : 'Cerrar sesión' }}</span>
-      </button>
-    </div>
-    <div class="about-masi">
-      <AppIcon name="home" :size="26" /><strong>masi.</strong>
-      <p>
-        «Colega», en quechua.<br />Un nombre para sentirnos un poquito más
-        cerca.
-      </p>
-    </div>
-  </section>
+  <ProfilePage title="Mi perfil" description="Tu información y tus accesos en masi.">
+    <ProfileIdentity :name="currentUser?.name || 'Mi cuenta'" :district="district">
+      <template #avatar="{ size }"><CurrentUserAvatar :size="size" /></template>
+      <template #action><ProfilePhoto /></template>
+    </ProfileIdentity>
+
+    <template #presentation>
+      <ProfileEditor />
+    </template>
+    <template #sidebar>
+      <ProfileShortcuts
+        :district="district"
+        :listings="ownListings.length"
+        :favorites="favoriteIds.length"
+        @open-panel="emit('openPanel', $event)"
+      />
+    </template>
+    <template #footer>
+      <footer class="profile-footer">
+        <button class="sign-out" type="button" :disabled="signingOut" @click="signOut">
+          <AppIcon name="log-out" :size="19" />
+          {{ signingOut ? 'Cerrando sesión…' : 'Cerrar sesión' }}
+        </button>
+        <p><strong>masi.</strong> «Colega» en quechua.</p>
+      </footer>
+    </template>
+  </ProfilePage>
 </template>
+
+<style scoped>
+.profile-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 20px;
+  margin-top: 24px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.profile-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.profile-footer strong {
+  color: var(--text);
+}
+
+.sign-out {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--local-accent-text);
+  background: transparent;
+  text-align: start;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.sign-out:disabled {
+  color: var(--muted);
+  cursor: wait;
+}
+
+@media (hover: hover) {
+  .sign-out:hover:not(:disabled) {
+    background: var(--local-accent-fill);
+  }
+}
+
+.sign-out:active:not(:disabled) {
+  background: var(--local-accent-fill);
+}
+</style>
