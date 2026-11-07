@@ -34,7 +34,8 @@ function submitComment() {
   <article class="neighbor-post" :aria-label="`Publicación de ${post.author}`">
     <header class="post-heading">
       <NAvatar
-        :size="43"
+        round
+        :size="46"
         :src="post.avatar"
         :img-props="{ alt: '' }"
         class="neighbor-avatar"
@@ -46,8 +47,11 @@ function submitComment() {
           ><span v-else> compartió una publicación</span>
         </p>
         <div class="post-meta">
-          <span>{{ post.neighborhood }}</span
-          ><span class="meta-dot">·</span><span>{{ post.time }}</span>
+          <span class="post-location">
+            <AppIcon name="pin" :size="13" />{{ post.neighborhood }}
+          </span>
+          <span class="meta-dot" aria-hidden="true">·</span>
+          <span>{{ post.time }}</span>
         </div>
       </div>
       <NDropdown
@@ -85,27 +89,17 @@ function submitComment() {
         <AppIcon :name="post.welcomed ? 'check' : 'smile'" :size="17" />
         {{ post.isWelcome ? 'Dar la bienvenida' : 'Me gusta' }}
       </NButton>
-      <NButton
-        round
-        class="reaction-button"
-        :aria-pressed="post.welcomed"
-        aria-label="Reaccionar a la publicación"
-        @click="emit('welcome', post.id)"
-        ><AppIcon name="smile" :size="20" /><AppIcon name="plus" :size="14"
-      /></NButton>
-      <NButton
-        round
-        class="comment-button"
-        :aria-expanded="composing"
-        @click="openComment"
-        >Comentar</NButton
-      >
+      <NButton round :aria-expanded="composing" @click="openComment">
+        <AppIcon name="chat" :size="16" /> Comentar
+      </NButton>
     </div>
     <div v-if="post.reactions > 0" class="reaction-summary">
       <div class="reaction-faces">
-        <img src="/images/lucia.jpg" alt="" /><img
+        <img src="/images/lucia.jpg" alt="" width="22" height="22" /><img
           src="/images/ana.jpg"
           alt=""
+          width="22"
+          height="22"
         /><span><AppIcon name="smile" :size="13" /></span>
       </div>
       <span
@@ -118,6 +112,7 @@ function submitComment() {
     <div v-if="post.comments.length" class="comments">
       <div v-for="comment in post.comments" :key="comment.id" class="comment">
         <NAvatar
+          round
           :size="34"
           :src="comment.avatar"
           :img-props="{ alt: '' }"

@@ -45,7 +45,7 @@ const favoritesKey = 'masi-marketplace-favorites-v1'
 const exampleListings: Listing[] = [
   {
     id: 'bicicleta-paseo',
-    title: 'Bicicleta de paseo, lista para nuevas aventuras',
+    title: 'Bicicleta de paseo',
     price: 280,
     category: 'Bicicletas',
     condition: 'Buen estado',
@@ -61,7 +61,7 @@ const exampleListings: Listing[] = [
   },
   {
     id: 'ceramica-artesanal',
-    title: 'Piezas de cerámica para darle vida a tu mesa',
+    title: 'Piezas de cerámica',
     price: 65,
     category: 'Hogar',
     condition: 'Como nuevo',
@@ -77,7 +77,7 @@ const exampleListings: Listing[] = [
   },
   {
     id: 'silla-lectura',
-    title: 'Una silla cómoda para tu rincón favorito',
+    title: 'Silla de lectura',
     price: 120,
     category: 'Hogar',
     condition: 'Buen estado',
@@ -205,10 +205,11 @@ export function useMarketplace() {
   }
 }
 
-export function formatPrice(price: number) {
+export function formatPrice(price: number, { compact = false } = {}) {
   return new Intl.NumberFormat('es-PE', {
     style: 'currency',
     currency: 'PEN',
+    minimumFractionDigits: compact && Number.isInteger(price) ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(price)
 }
