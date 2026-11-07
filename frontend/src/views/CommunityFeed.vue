@@ -41,7 +41,7 @@ function savePost(id: string) {
     <div v-if="!visiblePosts.length" class="empty-feed">
       <NEmpty description="El primer saludo puede ser el tuyo"
         ><template #extra
-          ><NButton type="primary" @click="router.push('/publicar')"
+          ><NButton type="primary" @click="router.push({ name: 'create' })"
             >Saluda a tu barrio</NButton
           ></template
         ></NEmpty

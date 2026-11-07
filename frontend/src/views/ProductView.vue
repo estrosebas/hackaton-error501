@@ -50,7 +50,7 @@ function deleteListing() {
   try {
     removeListing(listing.value.id)
     message.success('Anuncio eliminado')
-    router.replace({ name: 'market', query: { vista: 'mios' } })
+    router.replace({ name: 'market-mine' })
   } catch {
     message.error('No pudimos eliminar el anuncio. Inténtalo de nuevo.')
   }
@@ -60,7 +60,7 @@ function deleteListing() {
 <template>
   <section class="product-detail-page">
     <div class="product-back-row">
-      <RouterLink to="/mercadito" class="back-link"
+      <RouterLink :to="{ name: 'market' }" class="back-link"
         ><AppIcon name="arrow" :size="18" />Volver al mercadito</RouterLink
       ><NButton
         v-if="listing && !listing.owned"
@@ -167,7 +167,7 @@ function deleteListing() {
     <div v-else class="empty-market">
       <NEmpty description="Este anuncio ya no está disponible"
         ><template #extra
-          ><RouterLink to="/mercadito" class="text-link"
+          ><RouterLink :to="{ name: 'market' }" class="text-link"
             >Explorar el mercadito
             <AppIcon name="arrow" :size="16" /></RouterLink></template
       ></NEmpty>

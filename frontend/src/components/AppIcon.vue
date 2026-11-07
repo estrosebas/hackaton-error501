@@ -25,6 +25,11 @@ export type IconName =
   | 'locate'
   | 'minus'
   | 'clock'
+  | 'user'
+  | 'mail'
+  | 'lock'
+  | 'eye'
+  | 'eye-off'
 
 defineProps<{ name: IconName; size?: number }>()
 
@@ -76,6 +81,11 @@ const paths: Record<IconName, string[]> = {
   ],
   minus: ['M5 12h14'],
   clock: ['M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0', 'M12 7v5l3 2'],
+  user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0'],
+  mail: ['M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z', 'm2 7 10 6 10-6'],
+  lock: ['M5 11h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z', 'M8 11V7a4 4 0 0 1 8 0v4'],
+  eye: ['M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z', 'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0'],
+  'eye-off': ['m3 3 18 18', 'M10.5 6.1c.5-.1 1-.1 1.5-.1 6.4 0 10 6 10 6a16 16 0 0 1-2.5 2.8M6.2 7.8A16 16 0 0 0 2 12s3.6 6 10 6c1.7 0 3.2-.4 4.5-1.1'],
 }
 </script>
 

@@ -12,7 +12,7 @@ const emit = defineEmits<{
 <template>
   <header class="community-header">
     <div class="topbar">
-      <RouterLink class="wordmark" to="/inicio" aria-label="masi, inicio">
+      <RouterLink class="wordmark" :to="{ name: 'home' }" aria-label="masi, inicio">
         <AppIcon name="home" :size="30" />
         <span>masi<span class="brand-dot">.</span></span>
       </RouterLink>

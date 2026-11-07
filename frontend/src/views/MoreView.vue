@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import { NAvatar } from 'naive-ui'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import type { Panel } from '../components/community/CommunityPanels.vue'
 import { useCommunity } from '../composables/useCommunity'
 import { useMarketplace } from '../composables/useMarketplace'
+import { endDemoSession } from '../composables/useDemoSession'
 const { neighborhood } = useCommunity()
 const { ownListings, favoriteIds } = useMarketplace()
 const emit = defineEmits<{ openPanel: [panel: Panel] }>()
+const router = useRouter()
+
+function signOut() {
+  endDemoSession()
+  return router.replace({ name: 'login', state: { masiContinueTo: null } })
+}
 </script>
 
 <template>
@@ -35,7 +42,7 @@ const emit = defineEmits<{ openPanel: [panel: Panel] }>()
     <div class="more-menu">
       <RouterLink
         class="sheet-row"
-        :to="{ name: 'market', query: { vista: 'mios' } }"
+        :to="{ name: 'market-mine' }"
         ><AppIcon name="shop" /><span
           >Mis anuncios<small
             >{{ ownListings.length }} {{ ownListings.length === 1 ? 'producto publicado' : 'productos publicados' }}</small
@@ -43,7 +50,7 @@ const emit = defineEmits<{ openPanel: [panel: Panel] }>()
         ><AppIcon name="arrow" :size="18" /></RouterLink
       ><RouterLink
         class="sheet-row"
-        :to="{ name: 'market', query: { vista: 'guardados' } }"
+        :to="{ name: 'market-saved' }"
         ><AppIcon name="bookmark" /><span
           >Productos guardados<small
             >{{ favoriteIds.length }} {{ favoriteIds.length === 1 ? 'favorito' : 'favoritos' }} del mercadito</small
@@ -66,6 +73,9 @@ const emit = defineEmits<{ openPanel: [panel: Panel] }>()
             >{{ neighborhood }} y alrededores</small
           ></span
         ><AppIcon name="arrow" :size="18" />
+      </button>
+      <button class="sheet-row" type="button" @click="signOut">
+        <AppIcon name="arrow" /><span>Cerrar sesión</span>
       </button>
     </div>
     <div class="about-masi">

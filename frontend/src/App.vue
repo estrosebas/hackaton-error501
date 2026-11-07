@@ -7,7 +7,7 @@ import {
   NMessageProvider,
   type GlobalThemeOverrides,
 } from 'naive-ui'
-import AppShell from './components/layout/AppShell.vue'
+import { RouterView } from 'vue-router'
 
 const themeOverrides: GlobalThemeOverrides = {
   common: {
@@ -34,7 +34,7 @@ const themeOverrides: GlobalThemeOverrides = {
   >
     <NGlobalStyle />
     <NMessageProvider placement="top">
-      <AppShell />
+      <RouterView />
     </NMessageProvider>
   </NConfigProvider>
 </template>

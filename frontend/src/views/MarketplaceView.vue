@@ -13,8 +13,8 @@ const router = useRouter()
 const route = useRoute()
 const search = shallowRef('')
 const area = shallowRef('nearby')
-const showMine = computed(() => route.query.vista === 'mios')
-const showFavorites = computed(() => route.query.vista === 'guardados')
+const showMine = computed(() => route.name === 'market-mine')
+const showFavorites = computed(() => route.name === 'market-saved')
 const areaOptions = computed(() => [
   { label: 'Mi barrio y alrededores', value: 'nearby' },
   { label: `Solo ${neighborhood.value}`, value: 'neighborhood' },
@@ -45,10 +45,7 @@ const filteredListings = computed(() => {
 })
 
 function toggleMine() {
-  router.replace({
-    name: 'market',
-    query: showMine.value ? {} : { vista: 'mios' },
-  })
+  router.replace({ name: showMine.value ? 'market' : 'market-mine' })
 }
 </script>
 
@@ -85,7 +82,7 @@ function toggleMine() {
         <NButton
           type="primary"
           size="large"
-          @click="router.push({ name: 'create', query: { tipo: 'producto' } })"
+          @click="router.push({ name: 'create-product' })"
           ><template #icon><AppIcon name="plus" :size="20" /></template>Vender
           algo</NButton
         ><span
@@ -139,9 +136,7 @@ function toggleMine() {
             <NButton
               v-if="showMine"
               type="primary"
-              @click="
-                router.push({ name: 'create', query: { tipo: 'producto' } })
-              "
+              @click="router.push({ name: 'create-product' })"
               >Publicar un producto</NButton
             ></template
           ></NEmpty

@@ -15,14 +15,11 @@ const { addListing } = useMarketplace()
 const saving = shallowRef(false)
 const error = shallowRef('')
 const kind = computed(() =>
-  route.query.tipo === 'producto' ? 'producto' : 'publicacion',
+  route.name === 'create-product' ? 'producto' : 'publicacion',
 )
 
 function changeKind(value: string) {
-  router.replace({
-    name: 'create',
-    query: value === 'producto' ? { tipo: 'producto' } : {},
-  })
+  router.replace({ name: value === 'producto' ? 'create-product' : 'create' })
 }
 
 function publishPost(text: string) {
@@ -38,7 +35,7 @@ async function publishProduct(listing: NewListing) {
   try {
     addListing(listing)
     message.success('Tu producto ya está en el mercadito')
-    await router.push({ name: 'market', query: { vista: 'mios' } })
+    await router.push({ name: 'market-mine' })
   } catch {
     error.value =
       'No pudimos guardar el anuncio. Prueba con una foto más pequeña y revisa que el navegador permita guardar datos.'
