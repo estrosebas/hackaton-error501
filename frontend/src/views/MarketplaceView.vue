@@ -12,11 +12,17 @@ const { listings, ownListings, favoriteIds } = useMarketplace()
 const router = useRouter()
 const route = useRoute()
 const search = shallowRef('')
+const searchTheme = { fontSizeLarge: '16px', placeholderColor: 'var(--muted)' }
 const area = shallowRef('nearby')
 const showMine = computed(() => route.name === 'market-mine')
 const showFavorites = computed(() => route.name === 'market-saved')
+const title = computed(() => {
+  if (showMine.value) return 'Mis anuncios'
+  if (showFavorites.value) return 'Productos guardados'
+  return 'El mercadito'
+})
 const areaOptions = computed(() => [
-  { label: 'Mi barrio y alrededores', value: 'nearby' },
+  { label: 'Barrio y alrededores', value: 'nearby' },
   { label: `Solo ${neighborhood.value}`, value: 'neighborhood' },
 ])
 const filteredListings = computed(() => {
@@ -52,17 +58,29 @@ function toggleMine() {
 <template>
   <section class="marketplace-page" aria-labelledby="market-title">
     <div class="marketplace-intro">
-      <div class="page-heading">
-        <div>
-          <h1 id="market-title">
-            {{ showFavorites ? 'Tus productos guardados' : 'El mercadito' }}
-          </h1>
-          <p>Lo que buscas puede estar cerquita.</p>
-        </div>
-        <span class="page-heading-icon"
-          ><AppIcon name="shop" :size="25"
-        /></span>
+      <div class="marketplace-heading">
+        <h1 id="market-title">{{ title }}</h1>
+        <NButton
+          class="marketplace-sell"
+          type="primary"
+          @click="router.push({ name: 'create-product' })"
+        >
+          <template #icon><AppIcon name="plus" :size="18" /></template>
+          Vender algo
+        </NButton>
+        <p v-if="!showMine && !showFavorites">Lo que buscas puede estar cerquita.</p>
       </div>
+      <NInput
+        v-model:value="search"
+        class="marketplace-search"
+        size="large"
+        :theme-overrides="searchTheme"
+        clearable
+        placeholder="¿Qué estás buscando?"
+        :input-props="{ 'aria-label': 'Buscar productos', inputmode: 'search' }"
+      >
+        <template #prefix><AppIcon name="search" :size="18" /></template>
+      </NInput>
       <div class="marketplace-filters">
         <NSelect
           v-model:value="area"
@@ -78,32 +96,6 @@ function toggleMine() {
           <span class="listing-count">{{ ownListings.length }}</span></NButton
         >
       </div>
-      <div class="marketplace-actions">
-        <NButton
-          type="primary"
-          size="large"
-          @click="router.push({ name: 'create-product' })"
-          ><template #icon><AppIcon name="plus" :size="20" /></template>Vender
-          algo</NButton
-        ><span
-          >{{ filteredListings.length }}
-          {{ filteredListings.length === 1 ? 'anuncio' : 'anuncios' }}
-          {{
-            showMine
-              ? filteredListings.length === 1
-                ? 'tuyo'
-                : 'tuyos'
-              : 'cerca de ti'
-          }}</span
-        >
-      </div>
-      <NInput
-        v-model:value="search"
-        clearable
-        placeholder="¿Qué estás buscando?"
-        :input-props="{ 'aria-label': 'Buscar productos' }"
-        ><template #prefix><AppIcon name="search" :size="18" /></template
-      ></NInput>
       <NButton
         v-if="showFavorites"
         text
@@ -112,7 +104,14 @@ function toggleMine() {
         >Ver todos los anuncios <AppIcon name="arrow" :size="16"
       /></NButton>
     </div>
-    <div class="product-feed" aria-live="polite">
+    <div class="marketplace-results">
+      <h2>{{ showMine || showFavorites || search.trim() ? 'Resultados' : 'Cerca de ti' }}</h2>
+      <span role="status">
+        {{ filteredListings.length }}
+        {{ filteredListings.length === 1 ? 'anuncio' : 'anuncios' }}
+      </span>
+    </div>
+    <div class="product-feed">
       <ProductCard
         v-for="listing in filteredListings"
         :key="listing.id"
