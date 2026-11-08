@@ -169,6 +169,13 @@ class MapEventsTest extends TestCase
         $this->postJson('/api/v1/map-events', $this->payload(['latitude' => 200]))->assertUnprocessable();
         $this->postJson('/api/v1/map-events', $this->payload(['ends_at' => now()->addDays(5)]))->assertUnprocessable();
         $this->postJson('/api/v1/map-events', $this->payload(['frame' => 'neighbor']))->assertUnprocessable();
+        // Creator cannot join own event
+        $this->postJson("/api/v1/map-events/$id/join")->assertUnprocessable();
+        $this->postJson("/api/v1/map-events/$id/check-in", $this->position())->assertUnprocessable();
+
+        // Another neighbor can join and leave
+        $neighbor = $this->neighbor();
+        Sanctum::actingAs($neighbor);
         $this->postJson("/api/v1/map-events/$id/join")->assertOk();
         $this->deleteJson("/api/v1/map-events/$id/join")->assertNoContent();
         $this->travel(4)->hours();
@@ -218,5 +225,26 @@ class MapEventsTest extends TestCase
             'place' => 'Lugar',
             'has_cost' => false,
         ])->assertUnprocessable();
+    }
+
+    public function test_event_remains_visible_during_expiration_minute_and_expires_afterwards(): void
+    {
+        $owner = $this->neighbor();
+        Sanctum::actingAs($owner);
+        $startsAt = now()->addMinutes(10);
+        $endsAt = now()->addMinutes(30);
+        $id = $this->createEvent(['starts_at' => $startsAt->toIso8601String(), 'ends_at' => $endsAt->toIso8601String()]);
+
+        // At exact ends_at (e.g. 7:15)
+        $this->travelTo($endsAt);
+        $this->getJson('/api/v1/map-events')->assertOk()->assertJsonCount(1, 'data');
+
+        // During the expiration minute (e.g. 7:15:30)
+        $this->travelTo($endsAt->copy()->addSeconds(30));
+        $this->getJson('/api/v1/map-events')->assertOk()->assertJsonCount(1, 'data');
+
+        // Past the expiration minute (e.g. 7:16:05)
+        $this->travelTo($endsAt->copy()->addMinutes(1)->addSeconds(5));
+        $this->getJson('/api/v1/map-events')->assertOk()->assertJsonCount(0, 'data');
     }
 }

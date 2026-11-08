@@ -33,7 +33,7 @@ export function useMapEvents(){
     }catch(e){
       if(controller.signal.aborted||sessionStorage.getItem('masi.api.token')!==token)return
       const cache=await readMapSnapshot<{events:MapEvent[];catalog:MapCatalog}>()
-      if(cache&&!controller.signal.aborted&&sessionStorage.getItem('masi.api.token')===token){events.value=cache.data.events.filter(event=>Date.parse(event.ends_at)>Date.now());catalog.value=cache.data.catalog;cachedAt.value=cache.at;offline.value=true;error.value='Sin conexión. Mostrando la última copia guardada; los eventos pueden haber cambiado.'}
+      if(cache&&!controller.signal.aborted&&sessionStorage.getItem('masi.api.token')===token){events.value=cache.data.events.filter(event=>Date.parse(event.ends_at)+60000>Date.now());catalog.value=cache.data.catalog;cachedAt.value=cache.at;offline.value=true;error.value='Sin conexión. Mostrando la última copia guardada; los eventos pueden haber cambiado.'}
       else error.value=e instanceof Error?e.message:'No pudimos cargar el mapa.'
     }finally{loading.value=false}
   }  async function action(event:MapEvent,kind:'join'|'check-in'|'cancel',body?:unknown,method='POST'){

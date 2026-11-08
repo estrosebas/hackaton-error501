@@ -40,14 +40,15 @@ const selectedCategory = computed(() => catalog.value.categories.find(item => it
 const typeOptions = computed(() => (selectedCategory.value?.types ?? []).map(value => ({ label: value, value })))
 const reward = computed(() => form.category === 'support' && form.has_cost ? 0 : selectedCategory.value?.points ?? 0)
 
-watch(() => form.category, category => {
-  if (loading.value) return
+function selectCategory(category: string) {
+  if (form.category === category) return
+  form.category = category
   form.type = null
   if (category === 'emergency') {
     form.starts_at = localTime(new Date())
     form.ends_at = localTime(new Date(Date.now() + 7200000))
   }
-})
+}
 watch(() => form.type, () => { typeError.value = '' })
 watch(photo, (file, _, onCleanup) => {
   photoPreview.value = undefined
@@ -114,6 +115,15 @@ async function submit() {
     locationRequired.value = true
     return
   }
+  if (new Date(form.ends_at) <= new Date(form.starts_at)) {
+    error.value = 'La hora de fin debe ser posterior a la hora de inicio.'
+    return
+  }
+  const diffHours = (new Date(form.ends_at).getTime() - new Date(form.starts_at).getTime()) / 3600000
+  if (diffHours > 48) {
+    error.value = 'El evento puede durar hasta 48 horas.'
+    return
+  }
   saving.value = true
   try {
     const body = new FormData()
@@ -132,7 +142,7 @@ async function submit() {
     message.success(isEditing.value ? 'Tu evento ha sido actualizado.' : 'Tu evento ya está en el mapa comunitario.')
     await router.push({ name: 'neighbors' })
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'No pudimos crear el evento. Puedes volver a intentarlo.'
+    error.value = e instanceof Error ? e.message : (isEditing.value ? 'No pudimos actualizar el evento. Puedes volver a intentarlo.' : 'No pudimos crear el evento. Puedes volver a intentarlo.')
   } finally {
     saving.value = false
   }
@@ -152,7 +162,12 @@ async function submit() {
       <span class="event-page-icon"><AppIcon name="map" :size="24" /></span>
     </header>
 
-    <form @submit.prevent="submit">
+    <div v-if="loading" class="event-loading-card" role="status">
+      <div class="loading-spinner" />
+      <p>{{ isEditing ? 'Cargando datos del evento…' : 'Preparando opciones del mapa…' }}</p>
+    </div>
+
+    <form v-else @submit.prevent="submit">
       <fieldset class="map-event-form" :disabled="saving">
         <section class="event-form-panel event-form-info" aria-labelledby="event-info-title">
           <div class="event-section-heading">
@@ -161,12 +176,11 @@ async function submit() {
           </div>
           <fieldset class="event-category-field">
             <legend>¿Qué quieres crear?</legend>
-            <p v-if="loading" class="event-help" role="status">Cargando categorías…</p>
-            <div v-else class="event-category-choices">
+            <div class="event-category-choices">
               <button
                 v-for="item in catalog.categories" :key="item.id" type="button"
                 :aria-pressed="form.category === item.id" :style="{ '--event-color': item.color }"
-                @click="form.category = item.id"
+                @click="selectCategory(item.id)"
               >
                 <AppIcon :name="categoryIcons[item.id] ?? 'calendar'" :size="19" />
                 <strong>{{ item.label }}</strong>
@@ -223,11 +237,16 @@ async function submit() {
         <div class="event-form-footer">
           <p v-if="error" class="event-field-error" role="alert">{{ error }}</p>
           <p v-if="locationRequired && !confirmed" class="event-field-error" role="alert">Activa tu ubicación o elige un punto en el mapa.</p>
-          <NButton v-if="!loading && !catalog.categories.length" secondary round @click="loadOptions">Volver a cargar</NButton>
-          <NButton v-else type="primary" round attr-type="submit" :loading="saving" :disabled="locating || loading">
-            <template #icon><AppIcon name="pin" :size="18" /></template>
-            {{ isEditing ? 'Guardar cambios' : 'Crear evento en el mapa' }}
-          </NButton>
+          <NButton v-if="!catalog.categories.length" secondary round @click="loadOptions">Volver a cargar</NButton>
+          <div v-else class="event-footer-buttons">
+            <NButton type="primary" round attr-type="submit" :loading="saving" :disabled="locating">
+              <template #icon><AppIcon name="pin" :size="18" /></template>
+              {{ isEditing ? 'Guardar cambios' : 'Crear evento en el mapa' }}
+            </NButton>
+            <NButton v-if="isEditing" secondary round :disabled="saving" @click="router.push({ name: 'neighbors' })">
+              Descartar cambios
+            </NButton>
+          </div>
         </div>
       </fieldset>
     </form>
@@ -289,6 +308,31 @@ async function submit() {
 .event-frame-panel { padding-block: 7px; }
 .event-form-footer { display: grid; gap: 8px; }
 .event-form-footer .n-button { min-height: 46px; }
+.event-footer-buttons { display: flex; flex-direction: column; gap: 8px; }
+.event-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 260px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid #2b3046;
+  border-top-color: var(--coral);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 @container (min-width: 430px) {
   .event-date-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

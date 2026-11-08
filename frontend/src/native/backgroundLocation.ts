@@ -37,7 +37,7 @@ export function startBackgroundLocation():Promise<void> {
         if(result.status!==200||epoch!==generation)return
         for(const event of result.data.data||[]){
           if(epoch!==generation||sessionStorage.getItem('masi.api.token')!==token)break
-          if(!event.joined||event.attended||Date.parse(event.starts_at)>position.time||Date.parse(event.ends_at)<Date.now())continue
+          if(!event.joined||event.attended||Date.parse(event.starts_at)>position.time||Date.parse(event.ends_at)+60000<Date.now())continue
           const radians=Math.PI/180,dy=(event.latitude-position.latitude)*radians,dx=(event.longitude-position.longitude)*radians
           const a=Math.sin(dy/2)**2+Math.cos(position.latitude*radians)*Math.cos(event.latitude*radians)*Math.sin(dx/2)**2
           if(6371000*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)))>100)continue

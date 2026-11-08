@@ -66,7 +66,7 @@ class MapEventController extends Controller
     {
         $data = $request->validate(['latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'], 'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_with:latitude'], 'category' => ['nullable', Rule::in(array_keys(config('map-events.categories')))]]);
         $actor = $request->user();
-        $query = $this->located()->where('ubigeo', $actor->ubigeo)->whereNotNull('ubigeo')->where('ends_at', '>=', now())->whereNull('cancelled_at');
+        $query = $this->located()->where('ubigeo', $actor->ubigeo)->whereNotNull('ubigeo')->where('ends_at', '>=', now()->subMinute())->whereNull('cancelled_at');
         $blocked = DB::table('neighbor_blocks')->where('user_id', $actor->id)->pluck('blocked_user_id')
             ->merge(DB::table('neighbor_blocks')->where('blocked_user_id', $actor->id)->pluck('user_id'));
         $query->whereNotIn('user_id', $blocked);
@@ -132,9 +132,10 @@ class MapEventController extends Controller
     public function join(Request $request, MapEvent $event)
     {
         $this->visible($request, $event);
+        abort_if($event->user_id === $request->user()->id, 422, 'Como creador del evento no necesitas inscribirte ni recibes puntos de asistencia.');
         DB::transaction(function () use ($request, $event) {
             $locked = MapEvent::whereKey($event->id)->lockForUpdate()->firstOrFail();
-            abort_if($locked->cancelled_at || $locked->ends_at->isPast(), 422, 'Este evento ya terminó o fue cancelado.');
+            abort_if($locked->cancelled_at || $locked->ends_at->copy()->addMinute()->isPast(), 422, 'Este evento ya terminó o fue cancelado.');
             DB::table('map_event_attendances')->insertOrIgnore(['map_event_id' => $event->id, 'user_id' => $request->user()->id, 'joined_at' => now()]);
         });
 
@@ -158,6 +159,7 @@ class MapEventController extends Controller
     public function checkIn(Request $request, MapEvent $event, EmpathyRewards $rewards)
     {
         $this->visible($request, $event);
+        abort_if($event->user_id === $request->user()->id, 422, 'El creador del evento no puede registrar asistencia.');
         $data = $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'], 'longitude' => ['required', 'numeric', 'between:-180,180'],
             'accuracy' => ['required', 'numeric', 'between:0,100'],
@@ -171,7 +173,7 @@ class MapEventController extends Controller
                 return $attendance->id;
             }
             $captured = Carbon::parse($data['captured_at']);
-            abort_unless(! $locked->cancelled_at && now()->betweenIncluded($locked->starts_at, $locked->ends_at) && $captured->betweenIncluded($locked->starts_at, $locked->ends_at) && $captured->gte(Carbon::parse($attendance->joined_at)), 422, 'La asistencia se registra durante el horario del evento.');
+            abort_unless(! $locked->cancelled_at && now()->betweenIncluded($locked->starts_at, $locked->ends_at->copy()->addMinute()) && $captured->betweenIncluded($locked->starts_at, $locked->ends_at->copy()->addMinute()) && $captured->gte(Carbon::parse($attendance->joined_at)), 422, 'La asistencia se registra durante el horario del evento.');
             $distance = DB::selectOne('SELECT ST_Distance(location, ST_SetSRID(ST_MakePoint(?,?),4326)::geography) AS meters, ST_DWithin(location, ST_SetSRID(ST_MakePoint(?,?),4326)::geography, 100) AS nearby FROM map_events WHERE id = ?', [$data['longitude'], $data['latitude'], $data['longitude'], $data['latitude'], $event->id]);
             abort_unless($distance->nearby, 422, 'Debes estar a 100 metros o menos del evento.');
             DB::table('map_event_attendances')->where('id', $attendance->id)->whereNull('verified_at')->update(['verified_at' => $captured, 'distance_meters' => round($distance->meters, 2)]);
@@ -199,31 +201,23 @@ class MapEventController extends Controller
         $actor = $request->user();
         abort_unless($event->user_id === $actor->id, 403, 'Solo el creador puede editar este evento.');
         abort_if($event->cancelled_at, 422, 'No puedes editar un evento cancelado.');
-        abort_if($event->ends_at->isPast(), 422, 'No puedes editar un evento que ya finalizó.');
-
-        $hasVerifiedAttendance = DB::table('map_event_attendances')
-            ->where('map_event_id', $event->id)
-            ->whereNotNull('verified_at')
-            ->exists();
 
         $rules = [
             'title' => ['required', 'string', 'max:120'],
             'description' => ['required', 'string', 'max:2000'],
             'place' => ['required', 'string', 'max:180'],
             'has_cost' => ['required', 'boolean'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'starts_at' => ['required', 'date', 'before:+1 year'],
+            'ends_at' => ['required', 'date', 'after:starts_at'],
             'frame' => ['nullable', Rule::in(array_keys(config('map-events.frames')))],
             'photo' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=2400,max_height=2400'],
         ];
 
-        if (! $hasVerifiedAttendance) {
-            $rules['latitude'] = ['required', 'numeric', 'between:-90,90'];
-            $rules['longitude'] = ['required', 'numeric', 'between:-180,180'];
-            $rules['starts_at'] = ['required', 'date', 'before:+1 year'];
-            $rules['ends_at'] = ['required', 'date', 'after:starts_at'];
-            if ($request->has('category')) {
-                $rules['category'] = ['required', Rule::in(array_keys(config('map-events.categories')))];
-                $rules['type'] = ['nullable', 'string', Rule::in(config('map-events.categories.'.(is_string($request->input('category')) ? $request->input('category') : '').'.types', []))];
-            }
+        if ($request->has('category')) {
+            $rules['category'] = ['required', Rule::in(array_keys(config('map-events.categories')))];
+            $rules['type'] = ['nullable', 'string', Rule::in(config('map-events.categories.'.(is_string($request->input('category')) ? $request->input('category') : '').'.types', []))];
         }
 
         $data = $request->validate($rules);
@@ -241,9 +235,9 @@ class MapEventController extends Controller
         $oldPhotoPath = $event->photo_path;
 
         try {
-            DB::transaction(function () use ($event, $data, $newPhotoPath, $hasVerifiedAttendance) {
+            DB::transaction(function () use ($event, $data, $newPhotoPath) {
                 $locked = MapEvent::whereKey($event->id)->lockForUpdate()->firstOrFail();
-                abort_if($locked->cancelled_at || $locked->ends_at->isPast(), 422, 'Este evento ya no puede ser editado.');
+                abort_if($locked->cancelled_at, 422, 'Este evento ya no puede ser editado porque fue cancelado.');
 
                 $attributes = collect($data)->except(['photo', 'latitude', 'longitude'])->all();
                 $update = [
@@ -251,7 +245,7 @@ class MapEventController extends Controller
                     'updated_at' => now(),
                 ];
 
-                if (! $hasVerifiedAttendance && isset($data['latitude'], $data['longitude'])) {
+                if (isset($data['latitude'], $data['longitude'])) {
                     $update['location'] = DB::raw('ST_SetSRID(ST_MakePoint('.(float) $data['longitude'].','.(float) $data['latitude'].'),4326)::geography');
                 }
 

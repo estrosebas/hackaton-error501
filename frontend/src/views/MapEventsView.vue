@@ -14,8 +14,13 @@ import {backgroundTracking,backgroundError,backgroundPosition,startBackgroundLoc
 import {currentUser} from '../composables/useAuth'
 const {events,catalog,error,loading,hasMore,load,action}=useMapEvents()
 const category=ref(''),selected=ref<number>(),busy=ref(false),actionError=ref(''),notice=ref(''),tracking=ref(false)
-const search=ref(''),radius=ref(0),mode=ref<'map'|'list'>('map'),detailsOpen=ref(false),rewardsOpen=ref(false)
-const radiusOptions=[{label:'Todo',value:0},{label:'300 m',value:300},{label:'600 m',value:600},{label:'1 km',value:1000}]
+const search=ref(''),radius=ref(300),mode=ref<'map'|'list'>('map'),detailsOpen=ref(false),rewardsOpen=ref(false)
+const radiusOptions = [
+  { label: '300 m', value: 300 },
+  { label: '600 m', value: 600 },
+  { label: '1 km', value: 1000 },
+  { label: 'Todo', value: 0 },
+]
 const center=ref({lat:Number(currentUser.value?.latitude)||-12.0464,lng:Number(currentUser.value?.longitude)||-77.0428})
 watch(backgroundPosition,position=>{if(position)center.value=position})
 const visible=computed(()=>events.value.filter(event=>(!category.value||event.category===category.value)&&(!search.value||`${event.title} ${event.description} ${event.place}`.toLocaleLowerCase('es').includes(search.value.toLocaleLowerCase('es')))&&(!radius.value||latLng(center.value).distanceTo([event.latitude,event.longitude])<=radius.value)))
@@ -38,7 +43,7 @@ const eventTiming=computed<'pending'|'active'|'ended'>(()=>{
   if(!active.value)return 'pending'
   const now=Date.now()
   if(now<Date.parse(active.value.starts_at))return 'pending'
-  if(now>Date.parse(active.value.ends_at))return 'ended'
+  if(now>Date.parse(active.value.ends_at)+60000)return 'ended'
   return 'active'
 })
 function distanceMeters(event?:{latitude:number;longitude:number}|null):number|null{
@@ -57,14 +62,26 @@ function openEvent(id:number){selected.value=id;actionError.value='';detailsOpen
 function editEvent(event:MapEvent){detailsOpen.value=false;void router.push({name:'edit-map-event',params:{id:event.id}})}
 async function stopTracking(){tracking.value=false;try{await stopBackgroundLocation()}catch{actionError.value='No pudimos detener el servicio de ubicación. Intenta nuevamente.'}}
 watch([category,search,radius],()=>{selected.value=undefined;detailsOpen.value=false})
-async function run(event:MapEvent,kind:'join'|'cancel',method='POST'){if(busy.value)return;busy.value=true;actionError.value='';notice.value='';try{await action(event,kind,undefined,method);notice.value=kind==='cancel'?'Evento cancelado.':method==='DELETE'?'Inscripción cancelada.':'Estás inscrito. Valida tu asistencia cuando estés en el lugar.'}catch(e){actionError.value=e instanceof Error?e.message:'No pudimos completar la acción.'}finally{busy.value=false}}
+async function run(event:MapEvent,kind:'join'|'cancel',method='POST'){
+  if(busy.value)return
+  if(kind==='join' && event.is_owner){
+    actionError.value='Como creador del evento no necesitas inscribirte ni recibes puntos de asistencia.'
+    return
+  }
+  busy.value=true;actionError.value='';notice.value=''
+  try{await action(event,kind,undefined,method);notice.value=kind==='cancel'?'Evento cancelado.':method==='DELETE'?'Inscripción cancelada.':'Estás inscrito. Valida tu asistencia cuando estés en el lugar.'}catch(e){actionError.value=e instanceof Error?e.message:'No pudimos completar la acción.'}finally{busy.value=false}
+}
 async function locate(manual?:MapEvent){
   if(busy.value||document.hidden)return;busy.value=true;actionError.value='';notice.value=''
   try{
     if(manual){
+      if(manual.is_owner){
+        actionError.value='Como creador del evento no necesitas registrar asistencia.'
+        return
+      }
       const now = Date.now()
       const start = Date.parse(manual.starts_at)
-      const end = Date.parse(manual.ends_at)
+      const end = Date.parse(manual.ends_at) + 60000
       if(now < start){
         const startStr = new Date(manual.starts_at).toLocaleTimeString('es-PE', {hour: '2-digit', minute:'2-digit'})
         actionError.value = `El evento aún no comienza. Podrás validar tu asistencia a partir de las ${startStr}.`
@@ -84,7 +101,7 @@ async function locate(manual?:MapEvent){
       return
     }
     const now=Date.now()
-    const candidates=manual?[manual]:events.value.filter(event=>event.joined&&!event.attended&&Date.parse(event.starts_at)<=now&&Date.parse(event.ends_at)>=now)
+    const candidates=manual?[manual]:events.value.filter(event=>!event.is_owner&&event.joined&&!event.attended&&Date.parse(event.starts_at)<=now&&Date.parse(event.ends_at)+60000>=now)
     for(const event of candidates){
       if(location.accuracy > 100) continue
       try{await action(event,'check-in',location);notice.value=`Asistencia registrada · +${event.points} puntos de empatía.`}catch(e){if(manual)throw e}
@@ -126,7 +143,7 @@ onBeforeUnmount(()=>clearInterval(timer))
     </div>
     <div v-else class="neighbor-results-list">
       <div class="neighbor-results-heading"><span>{{visible.length}} eventos en tu zona</span><button class="event-refresh" type="button" :disabled="loading" @click="load"><AppIcon name="refresh" :size="14"/> Actualizar</button></div>
-      <button v-for="event in visible" :key="event.id" class="neighbor-result-row" :class="{'event-row--emergency':event.category==='emergency'}" type="button" @click="openEvent(event.id)"><span class="event-preview-glyph" :style="{borderColor:categoryOf(event)?.color}">{{categoryOf(event)?.emoji}}</span><span><strong>{{event.title}}</strong><small>{{date(event.starts_at)}} · {{event.place}} <strong v-if="formatDistance(event)" class="neighbor-distance-tag">· {{formatDistance(event)}}</strong></small><span class="neighbor-result-meta">{{categoryOf(event)?.label}} · +{{event.points}} P <span v-if="event.joined" class="neighbor-can-help">{{event.attended?'Asististe':'Inscrito'}}</span></span></span><AppIcon name="arrow" :size="18"/></button>
+      <button v-for="event in visible" :key="event.id" class="neighbor-result-row" :class="{'event-row--emergency':event.category==='emergency'}" type="button" @click="openEvent(event.id)"><span class="event-preview-glyph" :style="{borderColor:categoryOf(event)?.color}">{{categoryOf(event)?.emoji}}</span><span><strong>{{event.title}}</strong><small>{{date(event.starts_at)}} · {{event.place}} <strong v-if="formatDistance(event)" class="neighbor-distance-tag">· {{formatDistance(event)}}</strong></small><span class="neighbor-result-meta">{{categoryOf(event)?.label}} · +{{event.points}} P <span v-if="event.is_owner" class="neighbor-can-help">Tu evento</span><span v-else-if="event.joined" class="neighbor-can-help">{{event.attended?'Asististe':'Inscrito'}}</span></span></span><AppIcon name="arrow" :size="18"/></button>
       <p v-if="!loading&&!visible.length" class="map-feedback">No hay eventos con esos filtros.</p><p v-if="hasMore" class="map-feedback">Se muestran hasta 200 eventos.</p>
     </div>
     <NDrawer v-model:show="detailsOpen" placement="bottom" height="min(90dvh, 700px)" class="app-bottom-drawer">
@@ -212,29 +229,72 @@ onBeforeUnmount(()=>clearInterval(timer))
           </div>
 
           <!-- ESTADO DINÁMICO Y ALERTAS -->
-          <div v-if="active.attended" class="event-context-alert alert--attended">
-            <span class="alert-icon">✓</span>
-            <div class="alert-body">
-              <strong>Asistencia confirmada</strong>
-              <p>¡Gracias por participar! Se acreditaron +{{ active.points }} puntos de empatía a tu perfil.</p>
+          <template v-if="!active.is_owner">
+            <div v-if="active.attended" class="event-context-alert alert--attended">
+              <span class="alert-icon">✓</span>
+              <div class="alert-body">
+                <strong>Asistencia confirmada</strong>
+                <p>¡Gracias por participar! Se acreditaron +{{ active.points }} puntos de empatía a tu perfil.</p>
+              </div>
             </div>
-          </div>
 
-          <div v-else-if="eventTiming === 'ended'" class="event-context-alert alert--ended">
-            <span class="alert-icon">⌛</span>
-            <div class="alert-body">
-              <strong>Evento concluido</strong>
-              <p>Este evento finalizó a las {{ formatTime(active.ends_at) }}.</p>
+            <div v-else-if="eventTiming === 'pending'" class="event-context-alert alert--pending">
+              <span class="alert-icon">⏳</span>
+              <div class="alert-body">
+                <strong>El evento aún no inicia</strong>
+                <p>Inicia a las {{ formatTime(active.starts_at) }}. Podrás validar tu asistencia durante el horario del evento.</p>
+              </div>
             </div>
-          </div>
 
-          <div v-else-if="distanceMeters(active) !== null && distanceMeters(active)! > 100" class="event-context-alert alert--out-range">
-            <span class="alert-icon">📍</span>
-            <div class="alert-body">
-              <strong>Estás a {{ distanceMeters(active) }} m del punto</strong>
-              <p>Para registrar tu asistencia debes estar a 100 metros o menos durante el evento.</p>
+            <div v-else-if="eventTiming === 'ended'" class="event-context-alert alert--ended">
+              <span class="alert-icon">⌛</span>
+              <div class="alert-body">
+                <strong>Evento concluido</strong>
+                <p>Este evento finalizó a las {{ formatTime(active.ends_at) }}.</p>
+              </div>
             </div>
-          </div>
+
+            <div v-else-if="distanceMeters(active) !== null && distanceMeters(active)! <= 100" class="event-context-alert alert--in-range">
+              <span class="alert-icon">🎯</span>
+              <div class="alert-body">
+                <strong>Estás en el lugar (a {{ distanceMeters(active) }} m)</strong>
+                <p>Estás dentro del radio de 100 m. Ya puedes validar tu asistencia.</p>
+              </div>
+            </div>
+
+            <div v-else-if="distanceMeters(active) !== null && distanceMeters(active)! > 100" class="event-context-alert alert--out-range">
+              <span class="alert-icon">📍</span>
+              <div class="alert-body">
+                <strong>Estás a {{ distanceMeters(active) }} m del punto</strong>
+                <p>Para registrar tu asistencia debes estar a 100 metros o menos durante el evento.</p>
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <!-- ESTADO PARA EL CREADOR -->
+            <div v-if="eventTiming === 'ended'" class="event-context-alert alert--ended">
+              <span class="alert-icon">⌛</span>
+              <div class="alert-body">
+                <strong>Tu evento ha concluido</strong>
+                <p>Este evento finalizó a las {{ formatTime(active.ends_at) }}. Hubo {{ active.participants }} personas inscritas.</p>
+              </div>
+            </div>
+            <div v-else-if="eventTiming === 'pending'" class="event-context-alert alert--pending">
+              <span class="alert-icon">⏳</span>
+              <div class="alert-body">
+                <strong>Tu evento está programado</strong>
+                <p>Inicia a las {{ formatTime(active.starts_at) }}. Actualmente tienes {{ active.participants }} inscritos.</p>
+              </div>
+            </div>
+            <div v-else class="event-context-alert alert--in-range">
+              <span class="alert-icon">✨</span>
+              <div class="alert-body">
+                <strong>Tu evento está en curso</strong>
+                <p>Finaliza a las {{ formatTime(active.ends_at) }}. Los asistentes inscritos sumarán +{{ active.points }} puntos de empatía.</p>
+              </div>
+            </div>
+          </template>
 
           <!-- ERROR DE ACCIÓN -->
           <div v-if="actionError" class="event-context-alert alert--error" role="alert">
@@ -244,8 +304,8 @@ onBeforeUnmount(()=>clearInterval(timer))
             </div>
           </div>
 
-          <!-- ACCIONES DE ASISTENCIA -->
-          <div class="event-primary-actions">
+          <!-- ACCIONES DE ASISTENCIA (SOLO PARA ASISTENTES) -->
+          <div v-if="!active.is_owner" class="event-primary-actions">
             <template v-if="!active.joined">
               <NButton
                 type="primary"
@@ -286,6 +346,15 @@ onBeforeUnmount(()=>clearInterval(timer))
                 Cancelar inscripción
               </NButton>
             </template>
+          </div>
+
+          <!-- AVISO INFORMATIVO PARA EL CREADOR -->
+          <div v-else class="event-owner-host-notice">
+            <span class="host-notice-icon">📢</span>
+            <div class="host-notice-text">
+              <strong>Eres el organizador de este evento</strong>
+              <p>Los creadores coordinan el encuentro y no requieren inscribirse ni reciben puntos de asistencia.</p>
+            </div>
           </div>
 
           <!-- ACCIONES DEL CREADOR (MODIFICAR / CANCELAR) -->
@@ -594,6 +663,36 @@ onBeforeUnmount(()=>clearInterval(timer))
   min-height: 42px;
   font-size: 13px;
   font-weight: 700;
+}
+
+/* NOTICE FOR CREATOR */
+.event-owner-host-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #1e2235;
+  border: 1px solid #383e5e;
+  margin-top: 4px;
+}
+.host-notice-icon {
+  font-size: 20px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+.host-notice-text strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: #f1f3f9;
+  margin-bottom: 2px;
+}
+.host-notice-text p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
 /* CREATOR MANAGEMENT */

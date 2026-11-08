@@ -18,7 +18,7 @@ class EmpathyRewards
                 return false;
             }
             $verified = Carbon::parse($attendance->verified_at);
-            if (! $event || $event->cancelled_at || ! is_numeric($attendance->distance_meters) || $attendance->distance_meters < 0 || $attendance->distance_meters > 100 || $verified->isFuture() || $verified->lt(Carbon::parse($attendance->joined_at)) || ! $verified->betweenIncluded($event->starts_at, $event->ends_at)) {
+            if (! $event || $event->user_id === $attendance->user_id || $event->cancelled_at || ! is_numeric($attendance->distance_meters) || $attendance->distance_meters < 0 || $attendance->distance_meters > 100 || $verified->isFuture() || $verified->lt(Carbon::parse($attendance->joined_at)) || ! $verified->betweenIncluded($event->starts_at, $event->ends_at->copy()->addMinute())) {
                 return false;
             }
             DB::table('empathy_rewards')->insertOrIgnore([
