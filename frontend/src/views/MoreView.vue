@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useMessage } from 'naive-ui'
-import { computed, shallowRef } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import CurrentUserAvatar from '../components/auth/CurrentUserAvatar.vue'
@@ -13,11 +13,26 @@ import PrivateAccountCard from '../components/profile/PrivateAccountCard.vue'
 import FeedInterestsCard from '../components/profile/FeedInterestsCard.vue'
 import { currentUser, logout } from '../composables/useAuth'
 import { useCommunity } from '../composables/useCommunity'
-import { useMarketplace } from '../composables/useMarketplace'
+import { fetchListings } from '../composables/useMarketplace'
 
 const emit = defineEmits<{ openPanel: [panel: 'activities' | 'neighborhood'] }>()
 const { neighborhood } = useCommunity()
-const { ownListings, favoriteIds } = useMarketplace()
+const listingCount = shallowRef<number>()
+const favoriteCount = shallowRef<number>()
+watch(() => currentUser.value?.id, async (id, _, onCleanup) => {
+  listingCount.value = undefined
+  favoriteCount.value = undefined
+  if (!id) return
+  const request = new AbortController()
+  onCleanup(() => request.abort())
+  const [mine, saved] = await Promise.allSettled([
+    fetchListings({ view: 'mine' }, request.signal),
+    fetchListings({ view: 'saved' }, request.signal),
+  ])
+  if (request.signal.aborted) return
+  if (mine.status === 'fulfilled') listingCount.value = mine.value.total
+  if (saved.status === 'fulfilled') favoriteCount.value = saved.value.total
+}, { immediate: true })
 const district = computed(() => currentUser.value?.neighborhood || neighborhood.value)
 const router = useRouter()
 const signingOut = shallowRef(false)
@@ -52,8 +67,8 @@ async function signOut() {
     <template #sidebar>
       <ProfileShortcuts
         :district="district"
-        :listings="ownListings.length"
-        :favorites="favoriteIds.length"
+        :listings="listingCount"
+        :favorites="favoriteCount"
         @open-panel="emit('openPanel', $event)"
       />
     </template>

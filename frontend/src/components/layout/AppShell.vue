@@ -88,13 +88,15 @@ watch(
     }"
   >
     <a class="skip-link" href="#page-content">Ir al contenido</a>
-    <CommunityHeader
-      :neighborhood="neighborhood"
-      :unread="unread"
-      :compact="compactHeader"
-      @open="openPanel"
-    />
-    <CommunityEmergencyBanner :count="unreadEmergencies.length" @open="openPanel('notifications')" />
+    <div class="community-sticky-header">
+      <CommunityHeader
+        :neighborhood="neighborhood"
+        :unread="unread"
+        :compact="compactHeader"
+        @open="openPanel"
+      />
+      <CommunityEmergencyBanner :count="unreadEmergencies.length" @open="openPanel('notifications')" />
+    </div>
     <main id="page-content" class="community-content" :data-tab-direction="tabDirection" tabindex="-1">
       <RouterView v-slot="{ Component }">
         <Transition name="community-page" @leave="removePreviousView">
@@ -120,6 +122,17 @@ watch(
 </template>
 
 <style scoped>
+.community-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  flex: none;
+}
+
+.community-content {
+  isolation: isolate;
+}
+
 .profile-layout :deep(.community-header),
 .chat-layout :deep(.community-header) {
   border-bottom: 1px solid var(--line);
@@ -129,10 +142,6 @@ watch(
   display: flex;
   flex-direction: column;
   height: 100dvh;
-}
-
-.chat-layout :deep(.community-header) {
-  flex: none;
 }
 
 .chat-layout .community-content {

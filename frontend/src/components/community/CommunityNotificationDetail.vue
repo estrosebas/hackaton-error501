@@ -27,12 +27,12 @@ async function markRead(id: string) {
   }
 }
 
-watch([() => props.notice.id, attempt], async ([id], _, onCleanup) => {
+watch([() => props.notice.id, () => props.notice.author?.id, attempt], async ([id, authorId], _, onCleanup) => {
   const request = new AbortController()
   onCleanup(() => request.abort())
   post.value = undefined
   error.value = ''
-  if (!props.notice.author) {
+  if (!authorId) {
     if (!props.notice.read) void markRead(id)
     return
   }

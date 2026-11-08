@@ -17,10 +17,6 @@ defineEmits<{ open: [] }>()
 
 <style scoped>
 .emergency-banner {
-  position: sticky;
-  z-index: 9;
-  top: env(safe-area-inset-top, 0px);
-  flex: none;
   border-block-end: 1px solid var(--local-accent-line);
   background: var(--local-accent-fill);
 }

@@ -147,6 +147,20 @@ Categorías `moment`, `need_help`, `offer_help`, `collaboration`, `initiative`, 
 
 Las listas devuelven `data` y `next_cursor`. Las modificaciones devuelven `data`, salvo comentarios (mensaje) y eliminación (204). Las fotos publicadas se recodifican con PHP GD y WebP para eliminar metadatos y se guardan en el disco privado. Las fotos biométricas y los adjuntos personales mantienen el acceso exclusivo del propietario. El servidor extrae hasta cinco hashtags mediante Spatie Tags.
 
+### Mercadito
+
+Las rutas requieren Bearer. Los anuncios disponibles se comparten en el distrito de registro entre vecinos sin bloqueos. El servidor toma el distrito y el barrio del vendedor de su perfil. Los anuncios vendidos quedan en Mis anuncios.
+
+| Método | Ruta | Comportamiento |
+| --- | --- | --- |
+| GET | `/listings` | Devuelve `items`, `nextCursor` y `total`. Filtros `view=all\|mine\|saved`, `scope=nearby\|neighborhood`, `q` y `cursor`. `nearby` abarca el distrito y `neighborhood` filtra por barrio |
+| POST | `/listings` | Multipart con `requestId` (UUID estable para reintentos), `title`, `price` (PEN, hasta dos decimales), `category`, `condition`, `description` y `photo` (JPEG, PNG o WebP, hasta 2 MiB y 2400 × 2400 px) |
+| GET | `/listings/{listing}` | Devuelve el anuncio visible con vendedor, ubicación, estado y favorito de la cuenta |
+| GET | `/listings/{listing}/photo` | Sirve la foto WebP sin metadatos desde almacenamiento privado, con la misma visibilidad que el detalle |
+| PUT | `/listings/{listing}/favorite` | Establece `saved: boolean` para la cuenta |
+| PATCH | `/listings/{listing}` | El propietario marca el anuncio como vendido con `sold: true` |
+| DELETE | `/listings/{listing}` | El propietario elimina el anuncio, la foto y sus guardados |
+
 ## Instalación y verificación
 
 ```powershell

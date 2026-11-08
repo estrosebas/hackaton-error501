@@ -1,37 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useMessage } from 'naive-ui'
 import { RouterLink } from 'vue-router'
-import { formatPrice, useMarketplace, type Listing } from '../../composables/useMarketplace'
+import { formatPrice, type Listing } from '../../composables/useMarketplace'
 import AppIcon from '../AppIcon.vue'
+import ListingPhoto from './ListingPhoto.vue'
 
-const props = defineProps<{ listing: Listing; featured?: boolean }>()
-const { favoriteIds, toggleFavorite } = useMarketplace()
-const message = useMessage()
-const saved = computed(() => favoriteIds.value.includes(props.listing.id))
+const props = defineProps<{ listing: Listing; featured?: boolean; saving?: boolean }>()
+const emit = defineEmits<{ toggleFavorite: [listing: Listing] }>()
 const condition = computed(() => props.listing.sold ? 'Vendido' : props.listing.condition)
-
-function save() {
-  try {
-    toggleFavorite(props.listing.id)
-  } catch {
-    message.error('No pudimos actualizar tus guardados. Revisa el almacenamiento del navegador.')
-  }
-}
 </script>
 
 <template>
   <li class="listing" :class="{ 'listing--featured': featured }">
     <RouterLink :to="{ name: 'product', params: { id: listing.id } }" class="listing-link">
       <div class="listing-media">
-        <img
-          class="listing-photo"
-          :src="listing.image"
-          alt=""
-          width="720"
-          height="460"
-          :loading="featured ? 'eager' : 'lazy'"
-        />
+        <ListingPhoto class="listing-photo" :listing-id="listing.id" alt="" :eager="featured" />
         <span v-if="!featured" class="listing-condition">{{ condition }}</span>
       </div>
       <div class="listing-info">
@@ -48,9 +31,10 @@ function save() {
       v-if="!listing.owned && !featured"
       class="listing-save"
       type="button"
-      :aria-label="`Guardar ${listing.title}`"
-      :aria-pressed="saved"
-      @click="save"
+      :aria-label="`${listing.saved ? 'Quitar de guardados' : 'Guardar'} ${listing.title}`"
+      :aria-pressed="listing.saved"
+      :disabled="saving"
+      @click="emit('toggleFavorite', listing)"
     >
       <AppIcon name="heart" :size="18" />
     </button>
@@ -90,7 +74,6 @@ function save() {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
   transition: transform 180ms ease-out;
 }
 .listing-condition {

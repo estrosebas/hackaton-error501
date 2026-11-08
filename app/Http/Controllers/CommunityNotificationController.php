@@ -18,7 +18,8 @@ class CommunityNotificationController extends Controller
     {
         $viewer = $request->user();
         if (! $viewer->ubigeo) {
-            return response()->json(['data' => [], 'active' => [], 'sharing_presence' => false, 'my_avatar' => null, 'has_district' => false]);
+            return response()->json(['data' => [], 'active' => [], 'sharing_presence' => false, 'my_avatar' => null, 'has_district' => false])
+                ->header('Cache-Control', 'private, no-store');
         }
 
         User::whereKey($viewer->id)->where('share_community_presence', true)
@@ -36,7 +37,7 @@ class CommunityNotificationController extends Controller
             'sharing_presence' => $viewer->share_community_presence,
             'my_avatar' => $this->avatarVersion($viewer),
             'has_district' => true,
-        ]);
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function emergencies(Request $request)

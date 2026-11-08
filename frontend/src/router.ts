@@ -139,7 +139,8 @@ export const router = createRouter({
   scrollBehavior(to, _from, savedPosition) {
     if (savedPosition) return savedPosition
     const target = to.hash && document.getElementById(to.hash.slice(1))
-    return target ? { el: target, top: 8 } : { top: 0 }
+    const headerHeight = document.querySelector('.community-sticky-header')?.getBoundingClientRect().height ?? 0
+    return target ? { el: target, top: headerHeight + 8 } : { top: 0 }
   },
 })
 
