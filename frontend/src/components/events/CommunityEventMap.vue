@@ -143,7 +143,7 @@ function fitRange() {
   const bounds = props.radius > 0
     ? L.latLng(props.center).toBounds(props.radius * 2)
     : L.latLngBounds([L.latLng(props.center), ...props.events.map(event => L.latLng(event.latitude, event.longitude))])
-  map.fitBounds(bounds, { paddingTopLeft: [30, 115], paddingBottomRight: [30, 120], maxZoom: initialZoom, animate: !reducedMotion() })
+  map.fitBounds(bounds, { paddingTopLeft: [30, 200], paddingBottomRight: [30, 120], maxZoom: initialZoom, animate: !reducedMotion() })
 }
 function recenter() {
   if (props.pick) map?.setView(props.center, initialZoom, { animate: !reducedMotion() })
