@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CommunityPost;
 use App\Models\User;
 use Database\Seeders\HackathonDemoSeeder;
+use Database\Seeders\HackathonMapRangeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -40,6 +41,22 @@ class HackathonDemoSeederTest extends TestCase
         Sanctum::actingAs(User::factory()->create(['ubigeo' => '150101']));
         $this->getJson('/api/v1/feed')->assertOk()->assertJsonCount(0, 'data');
         $this->getJson('/api/v1/map-events')->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_demo_has_distinct_counts_at_each_map_range_and_remains_repeatable(): void
+    {
+        Http::preventStrayRequests();
+        $anchor = User::factory()->create(['ubigeo' => '040122', 'district' => 'Socabaya', 'latitude' => -16.46, 'longitude' => -71.53]);
+        config(['demo-feed.showcase' => true, 'demo-feed.map_anchor_user_id' => $anchor->id]);
+        $this->seed(HackathonMapRangeSeeder::class);
+        $this->seed(HackathonMapRangeSeeder::class);
+        $this->assertDatabaseCount('map_events', 36);
+        foreach ([300 => 12, 1000 => 24, 3000 => 36] as $meters => $expected) {
+            $result = DB::selectOne('SELECT count(*) AS total FROM map_events WHERE ST_DWithin(location, ST_SetSRID(ST_MakePoint(?, ?),4326)::geography, ?)', [$anchor->longitude, $anchor->latitude, $meters]);
+            $this->assertEquals($expected, $result->total);
+        }
+        $this->assertDatabaseCount('community_posts', 72);
+        $this->assertDatabaseCount('empathy_rewards', 0);
     }
 
     public function test_showcase_cannot_be_seeded_accidentally(): void

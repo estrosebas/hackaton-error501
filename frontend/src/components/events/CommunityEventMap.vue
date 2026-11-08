@@ -131,14 +131,23 @@ onMounted(()=>{
     document.addEventListener('visibilitychange', updateRadarPlayback, { signal: scope.signal })
     radiusCircle = L.circle(props.center, { radius: props.radius, color: '#bd9bcf', weight: 1, opacity: .45, fillColor: '#c3a7d5', fillOpacity: .045, dashArray: '5 8', interactive: false }).addTo(map)
   }
-  void render();observer=new ResizeObserver(()=>map?.invalidateSize());observer.observe(container.value)
+  void render();fitRange();observer=new ResizeObserver(()=>map?.invalidateSize());observer.observe(container.value)
 })
 watch(()=>[props.events,props.categories,props.frames],()=>{void render()})
 watch(()=>props.center,center=>{if(typeof center.lat!=='number'||typeof center.lng!=='number'||!Number.isFinite(center.lat)||!Number.isFinite(center.lng)||Math.abs(center.lat)>90||Math.abs(center.lng)>180)return;pin?.setLatLng(center);origin?.setLatLng(center);radiusCircle?.setLatLng(center);map?.setView(center,map.getZoom(),{animate:!reducedMotion()})},{deep:true})
-watch(()=>props.radius,radius=>radiusCircle?.setRadius(radius))
+watch(()=>props.radius,radius=>{radiusCircle?.setRadius(radius);fitRange()},{flush:'post'})
+watch(()=>props.events,()=>{if(!props.pick && props.radius===0)fitRange()},{flush:'post'})
 watch(()=>props.selected,id=>{const event=props.events.find(item=>item.id===id);if(event)map?.panInside([event.latitude,event.longitude],{paddingTopLeft:[40,70],paddingBottomRight:[55,map.getSize().y<360?43:205],animate:!reducedMotion()});void render()})
+function fitRange() {
+  if (!map || props.pick) return
+  const bounds = props.radius > 0
+    ? L.circle(props.center, { radius: props.radius }).getBounds()
+    : L.latLngBounds([L.latLng(props.center), ...props.events.map(event => L.latLng(event.latitude, event.longitude))])
+  map.fitBounds(bounds, { paddingTopLeft: [30, 115], paddingBottomRight: [30, 120], maxZoom: initialZoom, animate: !reducedMotion() })
+}
 function recenter() {
-  map?.setView(props.center, initialZoom, { animate: !reducedMotion() })
+  if (props.pick) map?.setView(props.center, initialZoom, { animate: !reducedMotion() })
+  else fitRange()
 }
 onBeforeUnmount(() => {
   generation++

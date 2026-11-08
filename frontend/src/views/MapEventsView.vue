@@ -19,7 +19,7 @@ const radiusOptions = [
   { label: '300 m', value: 300 },
   { label: '600 m', value: 600 },
   { label: '1 km', value: 1000 },
-  { label: 'Todo', value: 0 },
+  { label: 'Todo mi distrito', value: 0 },
 ]
 function selectCategory(catId: string) {
   category.value = catId
@@ -282,7 +282,7 @@ onBeforeUnmount(()=>clearInterval(timer))
             <span class="radar-pulse-ring" />
             <span class="radar-core-dot" />
           </span>
-          <span class="map-radar-text">{{ visible.length }} {{ visible.length === 1 ? 'evento' : 'eventos' }} en tu zona</span>
+          <span class="map-radar-text">{{ visible.length }} {{ visible.length === 1 ? 'evento' : 'eventos' }} · {{radius ? (radius < 1000 ? `${radius} m` : `${radius / 1000} km`) : 'Todo mi distrito'}} · {{events.length}} en el distrito</span>
         </button>
       </div>
 
