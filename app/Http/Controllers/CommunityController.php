@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CommunityPost;
 use App\Services\CommunityPhoto;
+use App\Services\NeighborConnections;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -12,13 +13,17 @@ use Illuminate\Validation\ValidationException;
 
 class CommunityController extends Controller
 {
-    private const KINDS = ['moment', 'need_help', 'offer_help', 'collaboration', 'initiative', 'activity', 'alert'];
+    private const KINDS = ['moment', 'need_help', 'offer_help', 'collaboration', 'initiative', 'activity', 'alert', 'emergency'];
 
     private const IMAGE_RULES = ['file', 'image', 'mimes:jpeg,png,webp', 'dimensions:max_width=2400,max_height=2400'];
 
-    private function scope(Request $request, CommunityPost $post): void
+    public function __construct(private NeighborConnections $connections) {}
+
+    private function scope(Request $request, CommunityPost $post, bool $respectBlocks = false): void
     {
-        abort_unless($request->user()->ubigeo && $request->user()->ubigeo === $post->ubigeo, 404);
+        $viewer = $request->user();
+        abort_unless($viewer->ubigeo && $viewer->ubigeo === $post->ubigeo, 404);
+        abort_if(($respectBlocks || $post->kind === 'emergency') && $this->connections->blocked($viewer->id, $post->user_id), 404);
     }
 
     private function present(CommunityPost $post, Request $request): array
@@ -50,8 +55,11 @@ class CommunityController extends Controller
     public function index(Request $request)
     {
         $data = $request->validate(['kind' => ['nullable', Rule::in(self::KINDS)], 'saved' => ['nullable', 'boolean'], 'cursor' => ['nullable', 'string', 'max:500']]);
-        abort_unless($request->user()->ubigeo, 422, 'Completa tu distrito para ver la comunidad.');
-        $posts = CommunityPost::where('ubigeo', $request->user()->ubigeo)
+        $viewer = $request->user();
+        abort_unless($viewer->ubigeo, 422, 'Completa tu distrito para ver la comunidad.');
+        $posts = CommunityPost::where('ubigeo', $viewer->ubigeo)
+            ->where(fn ($q) => $q->where('kind', '!=', 'emergency')->orWhere('user_id', $viewer->id)
+                ->orWhereIn('user_id', $this->connections->visibleNeighbors($viewer)->select('id')))
             ->when($data['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
             ->when($request->boolean('saved'), fn ($q) => $q->whereIn('id', DB::table('community_bookmarks')->select('post_id')->where('user_id', $request->user()->id)))
             ->with(['author:id,name,neighborhood,demo_key,demo_avatar', 'tags'])->withCount('comments')->orderByDesc('id')->cursorPaginate(10);
@@ -68,6 +76,13 @@ class CommunityController extends Controller
 
             return $this->present($post, $request);
         }), 'next_cursor' => $posts->nextCursor()?->encode()]);
+    }
+
+    public function show(Request $request, CommunityPost $post)
+    {
+        $this->scope($request, $post, respectBlocks: true);
+
+        return response()->json(['data' => $this->present($post->load(['author', 'tags']), $request)]);
     }
 
     public function store(Request $request, CommunityPhoto $photos)

@@ -13,6 +13,17 @@ const emit = defineEmits<{ publish: [text: string, kind: string, photos: Blob[],
 const draft = shallowRef('')
 const kind = shallowRef<string | null>('moment')
 const options = postKinds.filter((item) => item.value !== 'activity')
+const emergency = computed(() => !props.activity && kind.value === 'emergency')
+const publishLabel = computed(() => {
+  if (props.activity) return 'Publicar actividad'
+  return emergency.value ? 'Publicar emergencia' : 'Publicar en mi barrio'
+})
+const draftPlaceholder = computed(() => {
+  if (props.activity) return 'Cuenta qué harán y qué necesitan llevar.'
+  return emergency.value
+    ? 'Describe qué pasó, en qué zona y qué ayuda necesitas.'
+    : 'Cuenta qué quieres compartir con tus vecinos.'
+})
 const activityTitle = shallowRef('')
 const activityStarts = shallowRef('')
 const activityLocation = shallowRef('')
@@ -157,7 +168,7 @@ function submit() {
       <NInput
         v-model:value="draft"
         type="textarea"
-        :placeholder="activity ? 'Cuenta qué harán y qué necesitan llevar.' : 'Cuenta qué quieres compartir con tus vecinos.'"
+        :placeholder="draftPlaceholder"
         :input-props="{ id: draftId, 'aria-describedby': `${draftId}-help` }"
         :theme-overrides="draftTheme"
         :disabled="saving"
@@ -180,7 +191,10 @@ function submit() {
         <span v-if="!activity && kind === 'moment' && photos.length">Texto opcional</span>
       </PhotoPicker>
       <p v-if="photoError" class="compose-error" role="alert">{{ photoError }}</p>
-      <p :id="`${draftId}-help`">Se comparte con tu distrito. Puedes incluir hasta cinco hashtags.</p>
+      <p v-if="emergency" :id="`${draftId}-help`" class="emergency-note">
+        La emergencia aparecerá como prioridad para los vecinos conectados de tu distrito.
+      </p>
+      <p v-else :id="`${draftId}-help`">Se comparte con tu distrito. Puedes incluir hasta cinco hashtags.</p>
     </div>
     <p v-if="error" class="compose-error" role="alert">{{ error }}</p>
     <NButton
@@ -190,7 +204,7 @@ function submit() {
       attr-type="submit"
       :disabled="!canPublish || saving || preparingPhoto"
       :loading="saving"
-      >{{ activity ? 'Publicar actividad' : 'Publicar en mi barrio' }}</NButton
+      >{{ publishLabel }}</NButton
     >
   </form>
 </template>
@@ -215,5 +229,9 @@ function submit() {
 }
 .compose-error {
   color: #ffb0c0;
+}
+.compose-draft p.emergency-note {
+  color: var(--local-accent-text);
+  font-weight: 800;
 }
 </style>

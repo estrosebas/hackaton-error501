@@ -69,6 +69,7 @@ export const postKinds = [
   { value: 'initiative', label: 'Iniciativa vecinal' },
   { value: 'activity', label: 'Actividad comunitaria' },
   { value: 'alert', label: 'Alerta vecinal' },
+  { value: 'emergency', label: 'Emergencia' },
 ]
 function createCommunity() {
   const neighborhood = shallowRef(

@@ -12,6 +12,7 @@ import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
 import PostPhotoGallery from './PostPhotoGallery.vue'
 import ActivityDetails from './ActivityDetails.vue'
 import ActivitiesAgenda from './ActivitiesAgenda.vue'
+import CommunityNotificationCenter from './CommunityNotificationCenter.vue'
 import NeighborProfileDetails from '../neighbors/NeighborProfileDetails.vue'
 import { useCommunity, type Post } from '../../composables/useCommunity'
 
@@ -57,6 +58,7 @@ function selectNeighborhood(neighborhood: string) {
     placement="bottom"
     height="min(85dvh, 640px)"
     class="app-bottom-drawer"
+    :aria-label="drawerTitle"
     :auto-focus="true"
     @update:show="
       (show: boolean) => {
@@ -86,36 +88,7 @@ function selectNeighborhood(neighborhood: string) {
           ><AppIcon v-if="neighborhood === option" name="check" />
         </button>
       </div>
-      <div v-else-if="panel === 'notifications'" class="sheet-list">
-        <div class="sheet-row">
-          <span class="sheet-icon"><AppIcon name="users" /></span
-          ><span
-            >¡Miguel llegó al barrio!<small
-              >Dale una cálida bienvenida.</small
-            ></span
-          >
-        </div>
-        <div class="sheet-row">
-          <span class="sheet-icon"><AppIcon name="chat" /></span
-          ><span
-            >Una bienvenida de Lucía<small
-              >Hay una nueva conversación en el muro.</small
-            ></span
-          >
-        </div>
-        <button
-          class="sheet-row"
-          type="button"
-          @click="emit('open', 'activities')"
-        >
-          <span class="sheet-icon"><AppIcon name="calendar" /></span
-          ><span
-            >Planes del barrio<small
-              >Consulta las actividades publicadas.</small
-            ></span
-          ><AppIcon name="arrow" :size="18" />
-        </button>
-      </div>
+      <CommunityNotificationCenter v-else-if="panel === 'notifications'" @close="panel = null" />
       <div v-else-if="panel === 'messages'" class="sheet-empty">
         <RouterLink to="/mensajes" class="local-action">Abrir conversaciones</RouterLink>
       </div>
@@ -166,7 +139,6 @@ function selectNeighborhood(neighborhood: string) {
         </div>
         <p v-else class="sheet-hint">Esta publicación ya no está disponible.</p>
       </div>
-      <p v-if="panel === 'notifications'" class="demo-note">Modo de ejemplo · Datos temporales</p>
     </NDrawerContent>
   </NDrawer>
 </template>

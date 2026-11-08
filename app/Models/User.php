@@ -45,6 +45,7 @@ class User extends Authenticatable implements HasMedia
         'remember_token',
         'dni', 'biometric_consent_at',
         'birth_date', 'verification_digit',
+        'share_community_presence', 'community_active_at', 'community_avatar_path',
     ];
 
     /**
@@ -62,6 +63,7 @@ class User extends Authenticatable implements HasMedia
             'dni_checked_at' => 'datetime',
             'location_captured_at' => 'datetime',
             'neighbor_profile' => 'array',
+            'share_community_presence' => 'boolean',
         ];
     }
 

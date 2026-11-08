@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class NeighborConnections
@@ -36,6 +37,13 @@ class NeighborConnections
     public function neighbor(User $actor, User $target): void
     {
         abort_unless($actor->ubigeo && $actor->ubigeo === $target->ubigeo, 404);
+    }
+
+    public function visibleNeighbors(User $actor): Builder
+    {
+        return User::where('ubigeo', $actor->ubigeo)->whereKeyNot($actor->id)
+            ->whereNotIn('id', DB::table('neighbor_blocks')->where('user_id', $actor->id)->select('blocked_user_id'))
+            ->whereNotIn('id', DB::table('neighbor_blocks')->where('blocked_user_id', $actor->id)->select('user_id'));
     }
 
     public function profile(User $user): array

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { nextTick } from 'vue'
-import type { NavSection } from './components/community/BottomNavigation.vue'
+import type { NavSection } from './components/community/navigation'
 import { validateSession } from './composables/useAuth'
 
 declare module 'vue-router' {
