@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useMapEvents } from '../../composables/useMapEvents'
 import MapEventPhoto from './MapEventPhoto.vue'
@@ -11,17 +11,18 @@ const props = defineProps<{ agenda?: boolean }>()
 const emit = defineEmits<{selectActivity:[id:string];openAgenda:[]}>()
 const { activities, activitiesLoading } = useCommunity()
 const { events, catalog, loading, error, load } = useMapEvents()
+const mapLoaded = ref(false)
 const available = computed(() => events.value.filter(event => !event.cancelled && Date.parse(event.ends_at) > Date.now()))
 const upcoming = computed(() => props.agenda ? available.value : available.value.slice(0, 12))
 const category = (id: string) => catalog.value.categories.find(item => item.id === id)
 const date = (value: string) => new Date(value).toLocaleString('es-PE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-onMounted(() => { void load() })
+onMounted(async () => { try { await load() } finally { mapLoaded.value = true } })
 </script>
 
 <template>
   <section class="map-event-suggestions" :class="{ 'suggestions-agenda': agenda }" aria-label="Eventos del mapa comunitario">
-    <header><div><h2>Nos vemos en el barrio</h2><p>{{available.length}} eventos del mapa · {{activities.length}} actividades de la comunidad</p></div><RouterLink :to="{name:'neighbors'}">Ver mapa <AppIcon name="arrow" :size="16" /></RouterLink></header>
-    <p v-if="(loading || activitiesLoading) && !upcoming.length && !activities.length" class="rail-state" role="status">Buscando planes del barrio…</p>
+    <header><div><h2>Nos vemos en el barrio</h2><p v-if="mapLoaded">{{available.length}} eventos del mapa · {{activities.length}} actividades de la comunidad</p><p v-else>Eventos y actividades de tu distrito</p></div><RouterLink :to="{name:'neighbors'}">Ver mapa <AppIcon name="arrow" :size="16" /></RouterLink></header>
+    <p v-if="!mapLoaded || activitiesLoading || (loading && !upcoming.length && !activities.length)" class="rail-state" role="status">Buscando planes del barrio…</p>
     <div v-else-if="error && !upcoming.length && !activities.length" class="rail-state"><p role="alert">No pudimos cargar los eventos.</p><button type="button" @click="load">Reintentar</button></div>
     <p v-else-if="!upcoming.length && !activities.length" class="rail-state">Aún no hay eventos. Crea un encuentro con el botón +.</p>
     <div v-else class="event-stories">
