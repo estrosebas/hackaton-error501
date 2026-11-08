@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import AppIcon, { type IconName } from '../AppIcon.vue'
 
-const props = defineProps<{ district: string; listings: number; favorites: number }>()
+const props = defineProps<{ district: string; listings?: number; favorites?: number }>()
 const emit = defineEmits<{ openPanel: [panel: 'activities' | 'neighborhood'] }>()
 
 type Shortcut = { icon: IconName; label: string; detail: string } & (
@@ -35,13 +35,13 @@ const groups = computed<{ title: string; items: Shortcut[] }[]>(() => [
       {
         icon: 'shop',
         label: 'Mis anuncios',
-        detail: props.listings === 1 ? '1 producto publicado' : `${props.listings} productos publicados`,
+        detail: props.listings === undefined ? 'Ver tus publicaciones' : props.listings === 1 ? '1 producto publicado' : `${props.listings} productos publicados`,
         to: { name: 'market-mine' },
       },
       {
         icon: 'bookmark',
         label: 'Productos guardados',
-        detail: props.favorites === 1 ? '1 favorito' : `${props.favorites} favoritos`,
+        detail: props.favorites === undefined ? 'Ver tus favoritos' : props.favorites === 1 ? '1 favorito' : `${props.favorites} favoritos`,
         to: { name: 'market-saved' },
       },
     ],

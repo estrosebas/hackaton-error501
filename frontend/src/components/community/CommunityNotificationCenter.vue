@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, shallowRef, useTemplateRef } from 'vue'
+import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useCommunityNotifications, type CommunityNotification } from '../../composables/useCommunityNotifications'
 import AppIcon, { type IconName } from '../AppIcon.vue'
@@ -9,10 +9,12 @@ import CommunityNotificationSettings from './CommunityNotificationSettings.vue'
 
 const { snapshot, failed, emergenciesFailed, emergenciesReady, notices, unread, refresh, refreshEmergencies } = useCommunityNotifications()
 defineEmits<{ close: [] }>()
-const selected = shallowRef<CommunityNotification>()
+const selectedId = shallowRef<string>()
+const selected = computed(() => notices.value.find((notice) => notice.id === selectedId.value))
 const settingsOpen = shallowRef(false)
 const settingsButton = useTemplateRef<HTMLButtonElement>('settings-button')
 const list = useTemplateRef<HTMLUListElement>('notices')
+const heading = useTemplateRef<HTMLHeadingElement>('heading')
 const types: Record<CommunityNotification['kind'], { label: string; icon: IconName }> = {
   activity: { label: 'Actividad comunitaria', icon: 'calendar' },
   need_help: { label: 'Pedido de ayuda', icon: 'hand' },
@@ -25,7 +27,7 @@ const publishedDate = new Intl.DateTimeFormat('es-PE', {
 
 async function back() {
   const id = selected.value?.id
-  selected.value = undefined
+  selectedId.value = undefined
   await nextTick()
   list.value?.querySelector<HTMLButtonElement>(`[data-notice-id="${id}"]`)?.focus()
 }
@@ -42,6 +44,13 @@ function refreshNotices() {
 }
 
 onMounted(refreshNotices)
+
+watch(selected, async (notice) => {
+  if (notice || !selectedId.value) return
+  selectedId.value = undefined
+  await nextTick()
+  heading.value?.focus()
+})
 </script>
 
 <template>
@@ -58,7 +67,7 @@ onMounted(refreshNotices)
       <section aria-labelledby="notices-heading" class="notice-section">
         <div class="notice-heading">
           <div class="notice-heading-copy">
-            <h3 id="notices-heading">Avisos del distrito</h3>
+            <h3 id="notices-heading" ref="heading" tabindex="-1">Avisos del distrito</h3>
             <span v-if="unread" class="unread-count">{{ unread }} sin leer</span>
           </div>
           <button v-if="snapshot?.has_district" ref="settings-button" type="button" class="visibility-button" @click="settingsOpen = true">
@@ -73,7 +82,7 @@ onMounted(refreshNotices)
               :data-kind="notice.kind"
               :class="{ 'notice-unread': !notice.read }"
               :data-notice-id="notice.id"
-              @click="selected = notice"
+              @click="selectedId = notice.id"
             >
               <span class="notice-avatar">
                 <CommunityNotificationAvatar v-if="notice.author" :person="notice.author" :size="44" />

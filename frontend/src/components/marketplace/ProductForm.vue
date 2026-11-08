@@ -37,6 +37,8 @@ const model = reactive({
 })
 const readingPhoto = shallowRef(false)
 const photoError = shallowRef('')
+const photo = shallowRef<File | null>(null)
+const requestId = crypto.randomUUID()
 const categoryOptions = productCategories.map((value) => ({
   label: value,
   value,
@@ -99,6 +101,11 @@ async function selectPhoto([file]: File[]) {
     const image = new Image()
     image.src = imageData
     await image.decode()
+    if (image.naturalWidth > 2400 || image.naturalHeight > 2400) {
+      photoError.value = 'Usa una foto de hasta 2400 × 2400 píxeles.'
+      return
+    }
+    photo.value = file
     model.image = imageData
   } catch {
     photoError.value = 'No pudimos abrir la foto. Inténtalo con otra imagen.'
@@ -108,6 +115,7 @@ async function selectPhoto([file]: File[]) {
 }
 
 function removePhoto() {
+  photo.value = null
   model.image = ''
   photoError.value = ''
 }
@@ -119,7 +127,7 @@ async function submit() {
   } catch {
     return
   }
-  if (!model.image) {
+  if (!photo.value) {
     photoError.value = 'Agrega una foto para que tus vecinos vean el producto.'
     message.warning(photoError.value)
     return
@@ -131,11 +139,13 @@ async function submit() {
   )
     return
   emit('publish', {
-    ...model,
+    title: model.title,
     price: model.price,
     category: model.category,
     condition: model.condition,
-    neighborhood: props.neighborhood,
+    description: model.description,
+    photo: photo.value,
+    requestId,
   })
 }
 </script>
@@ -227,8 +237,5 @@ async function submit() {
       :disabled="readingPhoto"
       >Publicar producto</NButton
     >
-    <p class="marketplace-demo-note">
-      Tu anuncio quedará guardado en este dispositivo.
-    </p>
   </NForm>
 </template>

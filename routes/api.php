@@ -11,6 +11,7 @@ use App\Http\Controllers\DemoAvatarController;
 use App\Http\Controllers\FacePhotoController;
 use App\Http\Controllers\FeedInterestController;
 use App\Http\Controllers\MapEventController;
+use App\Http\Controllers\MarketplaceListingController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\NeighborController;
 use App\Http\Controllers\NeighborEndorsementController;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::pattern('room', '[0-9]+');
 Route::pattern('neighbor', '[0-9]+');
+Route::pattern('listing', '[1-9][0-9]{0,17}');
 
 Route::prefix('v1')->group(function () {
     Route::get('demo/avatars/{filename}', DemoAvatarController::class)->where('filename', '(0[1-9]|1[0-9]|20)\.jpg');
@@ -41,6 +43,13 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('neighbors/{neighbor}/endorsement', [NeighborEndorsementController::class, 'show']);
         Route::put('neighbors/{neighbor}/endorsement', [NeighborEndorsementController::class, 'update'])->middleware('throttle:30,1,neighbor-endorsements');
+        Route::get('listings', [MarketplaceListingController::class, 'index']);
+        Route::post('listings', [MarketplaceListingController::class, 'store'])->middleware(['can:posts.create', 'throttle:12,1,marketplace-create']);
+        Route::get('listings/{listing}', [MarketplaceListingController::class, 'show']);
+        Route::get('listings/{listing}/photo', [MarketplaceListingController::class, 'photo']);
+        Route::patch('listings/{listing}', [MarketplaceListingController::class, 'markSold']);
+        Route::delete('listings/{listing}', [MarketplaceListingController::class, 'destroy']);
+        Route::put('listings/{listing}/favorite', [MarketplaceListingController::class, 'favorite'])->middleware('throttle:60,1,marketplace-favorite');
         Route::get('map-events/catalog', [MapEventController::class, 'catalog']);
         Route::get('map-events', [MapEventController::class, 'index']);
         Route::get('map-events/{event}', [MapEventController::class, 'show'])->whereNumber('event');

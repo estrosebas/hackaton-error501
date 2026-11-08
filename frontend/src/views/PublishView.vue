@@ -5,13 +5,13 @@ import { useRoute, useRouter } from 'vue-router'
 import PostComposer from '../components/community/PostComposer.vue'
 import ProductForm from '../components/marketplace/ProductForm.vue'
 import { useCommunity, type ActivityDetails } from '../composables/useCommunity'
-import { useMarketplace, type NewListing } from '../composables/useMarketplace'
+import { addListing, type NewListing } from '../composables/useMarketplace'
+import { currentUser } from '../composables/useAuth'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const { neighborhood, addPost } = useCommunity()
-const { addListing } = useMarketplace()
 const saving = shallowRef(false)
 const error = shallowRef('')
 const tabs = ['feed-create', 'create-activity', 'create-product']
@@ -46,12 +46,11 @@ async function publishProduct(listing: NewListing) {
   saving.value = true
   error.value = ''
   try {
-    addListing(listing)
+    await addListing(listing)
     message.success('Tu producto ya está en el mercadito')
     await router.push({ name: 'market-mine' })
-  } catch {
-    error.value =
-      'No pudimos guardar el anuncio. Prueba con una foto más pequeña y revisa que el navegador permita guardar datos.'
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'No pudimos publicar el anuncio. Inténtalo de nuevo.'
   } finally {
     saving.value = false
   }
@@ -83,7 +82,7 @@ async function publishProduct(listing: NewListing) {
           @publish="publishPost" /></NTabPane
       ><NTabPane name="create-product" tab="Vender algo"
         ><ProductForm
-          :neighborhood="neighborhood"
+          :neighborhood="currentUser?.neighborhood || 'tu barrio de registro'"
           :saving="saving"
           :error="error"
           @publish="publishProduct" /></NTabPane

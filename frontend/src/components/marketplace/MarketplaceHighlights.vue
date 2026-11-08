@@ -7,7 +7,9 @@ const props = defineProps<{
   featured: Listing
   latest: Listing[]
   recent: Listing[]
+  saving: ReadonlySet<string>
 }>()
+const emit = defineEmits<{ toggleFavorite: [listing: Listing] }>()
 
 const shelves = computed(() => [
   { id: 'market-latest', title: 'Recién publicados', listings: props.latest },
@@ -26,7 +28,13 @@ const shelves = computed(() => [
     <section v-for="shelf in shelves" :key="shelf.id" :aria-labelledby="shelf.id">
       <h2 :id="shelf.id">{{ shelf.title }}</h2>
       <ul class="market-shelf" role="list" tabindex="0" :aria-labelledby="shelf.id">
-        <ProductCard v-for="listing in shelf.listings" :key="listing.id" :listing="listing" />
+        <ProductCard
+          v-for="listing in shelf.listings"
+          :key="listing.id"
+          :listing="listing"
+          :saving="saving.has(listing.id)"
+          @toggle-favorite="emit('toggleFavorite', $event)"
+        />
       </ul>
     </section>
   </div>

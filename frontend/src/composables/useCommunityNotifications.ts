@@ -51,7 +51,7 @@ function createNotifications({ onNewAlerts, onNewEmergencies }: NotificationCall
   let emergencyTimer: ReturnType<typeof setInterval> | undefined
 
   async function refresh(replace = false) {
-    if (scope.signal.aborted || document.hidden || (syncing && !replace)) return
+    if (scope.signal.aborted || !currentUser.value?.id || document.hidden || (syncing && !replace)) return
     syncing?.abort()
     const request = new AbortController()
     syncing = request
@@ -77,7 +77,7 @@ function createNotifications({ onNewAlerts, onNewEmergencies }: NotificationCall
   }
 
   async function refreshEmergencies(replace = false) {
-    if (scope.signal.aborted || document.hidden || (syncingEmergencies && !replace)) return
+    if (scope.signal.aborted || !currentUser.value?.id || document.hidden || (syncingEmergencies && !replace)) return
     syncingEmergencies?.abort()
     const request = new AbortController()
     syncingEmergencies = request
@@ -139,13 +139,23 @@ function createNotifications({ onNewAlerts, onNewEmergencies }: NotificationCall
   }
 
   function onVisibility() {
-    if (document.hidden) return
+    if (document.hidden) {
+      syncing?.abort()
+      syncingEmergencies?.abort()
+      syncing = undefined
+      syncingEmergencies = undefined
+      return
+    }
     void refresh()
     void refreshEmergencies()
   }
-  watch(() => currentUser.value?.ubigeo, () => {
-    syncing?.abort(); syncingEmergencies?.abort()
-    snapshot.value = undefined; emergencies.value = undefined
+  watch([() => currentUser.value?.id, () => currentUser.value?.ubigeo], () => {
+    syncing?.abort()
+    syncingEmergencies?.abort()
+    snapshot.value = undefined
+    emergencies.value = undefined
+    failed.value = false
+    emergenciesFailed.value = false
     void refresh(true); void refreshEmergencies(true)
   })
 

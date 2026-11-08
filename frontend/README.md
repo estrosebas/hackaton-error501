@@ -27,16 +27,16 @@ Para verificar el compilado de producción, ejecuta `npm run build` en `frontend
 
 ## Datos que maneja el frontend hoy
 
-El registro consulta la API real de Laravel. Inicio, Mercadito, vecinos y planes
+El registro y Mercadito consultan la API de Laravel. Inicio, vecinos y planes
 conservan datos de demostración y su estado local mientras se conectan sus servicios.
 
 | Flujo | Datos que recoge o procesa el frontend | Comportamiento actual |
 | --- | --- | --- |
 | Inicio de sesión | `dni`, `password` | Laravel valida las credenciales, emite un token Sanctum y el router verifica su vigencia con `/profile`. |
 | Registro | DNI, ticket de identidad, contacto, contraseña, UBIGEO, barrio, ubicación actual y foto | Consulta Scrall, bloquea los datos obtenidos y crea cuenta real mediante Laravel/Python. |
-| Publicar producto | `title`, `price`, `category`, `condition`, `description`, `image`, `neighborhood` | Emite `NewListing`. `image` es una URL de datos Base64 y `neighborhood` es el nombre visible del barrio. |
-| Explorar productos | Texto de búsqueda, zona `nearby` o `neighborhood`, vista general, propia o guardada | Filtra los datos en memoria. La búsqueda compara el título, la descripción y la categoría. |
-| Administrar productos | ID del anuncio al guardar, marcar como vendido o eliminar | Persiste los anuncios propios y los IDs guardados en `localStorage`. |
+| Publicar producto | `title`, `price`, `category`, `condition`, `description`, `photo`, `requestId` | Envía el anuncio y la foto a Laravel. El servidor asigna el barrio del perfil. |
+| Explorar productos | Texto de búsqueda, zona `nearby` o `neighborhood`, vista general, propia o guardada | Laravel filtra y pagina los anuncios visibles. |
+| Administrar productos | ID del anuncio al guardar, marcar como vendido o eliminar | Laravel guarda los cambios por cuenta. El detalle enlaza al chat con el vendedor. |
 | Publicaciones y comentarios | Texto de publicación de hasta 2.000 caracteres, ID de publicación y texto de comentario de hasta 500 | El muro, los comentarios, las reacciones y los guardados se actualizan en memoria. |
 | Vecinos y planes | Barrio seleccionado, búsqueda, radio en metros, filtro `all`, `help` o `activities`, ID del plan al marcar interés | El mapa usa perfiles y posiciones de ejemplo. Los planes y el interés se manejan en memoria. |
 
@@ -48,7 +48,7 @@ Implementación actual en [AuthForm](src/components/auth/AuthForm.vue),
 
 ## Contrato propuesto para el backend
 
-Las rutas de Mercadito, muro, vecinos y planes de esta sección son propuestas
+Las rutas de muro, vecinos y planes de esta sección son propuestas
 pendientes de implementación bajo `/api/v1`. Las
 rutas de navegación como `/mercadito/guardados` pertenecen a Vue Router.
 
@@ -60,53 +60,9 @@ La API usa tokens Bearer de Sanctum; el login del frontend usa las credenciales 
 El registro conserva el token en sessionStorage durante la sesión de esta pestaña.
 Cada navegación protegida valida `/profile`; también se revisa la sesión al volver a la pestaña, cada 30 segundos y en su fecha de vencimiento. Un 401 elimina el token local y vuelve al login. Cerrar sesión revoca el token actual en Laravel antes de eliminarlo de sessionStorage; si falla la conexión, se muestra un error y se permite reintentar.
 
-### Mercadito
+### Mercadito implementado
 
-| Operación propuesta | Envío del frontend | Respuesta esperada |
-| --- | --- | --- |
-| `GET /listings` | `q`, `scope=nearby\|neighborhood`, `view=all\|mine\|saved`, `neighborhoodId` y `cursor` opcional | `200` con `{ items, nextCursor, total }`. `nextCursor` es `null` al terminar. La vista propia incluye vendidos. |
-| `GET /listings/{id}` | ID | `200` con el anuncio o `404` si ya no está disponible. |
-| `POST /listings` | `multipart/form-data` con los campos de abajo | `201` con el anuncio listo para mostrar. |
-| `PATCH /listings/{id}` | `{ sold: true }` | `200` con el anuncio actualizado. Requiere ser propietario. |
-| `DELETE /listings/{id}` | ID | `204` al eliminar. Requiere ser propietario. |
-| `PUT /listings/{id}/favorite` | `{ saved: true }` o `{ saved: false }` | `200` con `{ saved }`. Reintentar la misma petición deja el mismo estado. |
-
-El formulario de publicación usa estos valores:
-
-| Campo | Contrato propuesto |
-| --- | --- |
-| `title` | Texto de 3 a 100 caracteres. |
-| `price` | Importe en PEN entre 0 y 999999, con hasta dos decimales. En el formulario multipart se serializa como texto decimal, por ejemplo `65.00`. |
-| `category` | `Bicicletas`, `Hogar`, `Moda`, `Tecnología` u `Otros`. |
-| `condition` | `Como nuevo`, `Buen estado` o `Con detalles`. |
-| `description` | Texto de 10 a 2.000 caracteres. |
-| `image` | Un archivo JPG, PNG o WebP de hasta 2 MiB. El frontend adaptará la foto de la demo a un archivo multipart. |
-| `neighborhoodId` | ID del barrio donde se publica. Sustituye al nombre de barrio que usa el formulario local. |
-
-Ejemplo de anuncio en una respuesta:
-
-```json
-{
-  "id": "listing_123",
-  "title": "Piezas de cerámica",
-  "description": "Se venden juntas y se recogen en el barrio.",
-  "price": 65,
-  "currency": "PEN",
-  "category": "Hogar",
-  "condition": "Como nuevo",
-  "image": "https://media.example.com/listings/listing_123.webp",
-  "neighborhood": { "id": "san-blas", "name": "San Blas" },
-  "seller": { "id": "user_456", "name": "Lucía", "avatar": null },
-  "createdAt": "2026-11-04T15:00:00Z",
-  "owned": false,
-  "sold": false,
-  "saved": true
-}
-```
-
-El backend asigna `id`, vendedor y fecha, y calcula `owned` y `saved` para la
-sesión activa. El frontend transforma el barrio y el vendedor en los valores
-que usa la tarjeta y formatea el precio para la vista.
+Los anuncios y favoritos se guardan en PostgreSQL por cuenta. El flujo usa las rutas de [Mercadito en la API](../docs/backend-api.md#mercadito).
 
 ### Muro, vecinos y planes
 
