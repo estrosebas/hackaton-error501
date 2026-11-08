@@ -174,4 +174,49 @@ class MapEventsTest extends TestCase
         $this->travel(4)->hours();
         $this->postJson("/api/v1/map-events/$id/check-in", $this->position())->assertUnprocessable();
     }
+
+    public function test_owner_can_update_event_and_permissions_are_enforced(): void
+    {
+        $owner = $this->neighbor();
+        Sanctum::actingAs($owner);
+        $id = $this->createEvent();
+
+        // Details show
+        $this->getJson("/api/v1/map-events/$id")->assertOk()->assertJsonPath('data.is_owner', true);
+
+        // Non-owner gets 403
+        $stranger = $this->neighbor();
+        Sanctum::actingAs($stranger);
+        $this->postJson("/api/v1/map-events/$id", [
+            'title' => 'Intento extraño',
+            'description' => 'Texto',
+            'place' => 'Lugar',
+            'has_cost' => false,
+        ])->assertForbidden();
+
+        // Owner can update
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/map-events/$id", [
+            'title' => 'Título actualizado',
+            'description' => 'Descripción nueva para el evento.',
+            'place' => 'Nuevo parque',
+            'has_cost' => false,
+            'category' => 'community',
+            'latitude' => -12.0465,
+            'longitude' => -77.0429,
+            'starts_at' => now()->addHours(2)->toIso8601String(),
+            'ends_at' => now()->addHours(4)->toIso8601String(),
+        ])->assertOk()->assertJsonPath('data.title', 'Título actualizado');
+
+        $this->assertDatabaseHas('map_events', ['id' => $id, 'title' => 'Título actualizado', 'place' => 'Nuevo parque']);
+
+        // Cancelled event cannot be updated
+        $this->postJson("/api/v1/map-events/$id/cancel")->assertNoContent();
+        $this->postJson("/api/v1/map-events/$id", [
+            'title' => 'Otro cambio',
+            'description' => 'Desc',
+            'place' => 'Lugar',
+            'has_cost' => false,
+        ])->assertUnprocessable();
+    }
 }

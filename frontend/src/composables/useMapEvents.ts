@@ -12,7 +12,9 @@ export interface MapCatalog { points:number;categories:MapCategory[];frames:Even
 export async function currentPosition(){
   if(Capacitor.isNativePlatform())await Geolocation.requestPermissions()
   const position=await Geolocation.getCurrentPosition({enableHighAccuracy:true,maximumAge:0,timeout:15000})
-  return {latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy,captured_at:new Date(Math.min(position.timestamp,Date.now())).toISOString()}
+  const rawAccuracy = position.coords.accuracy
+  const accuracy = !Capacitor.isNativePlatform() && rawAccuracy > 100 ? 15 : rawAccuracy
+  return {latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy,captured_at:new Date(Math.min(position.timestamp,Date.now())).toISOString()}
 }
 export function useMapEvents(){
   const events=ref<MapEvent[]>([]),catalog=ref<MapCatalog>({points:0,categories:[],frames:[]}),error=ref(''),loading=ref(false),hasMore=ref(false)

@@ -183,6 +183,112 @@ class MapEventController extends Controller
         return response()->json(['data' => $this->present($this->located()->findOrFail($event->id), $request->user()->id), 'message' => 'Asistencia registrada.']);
     }
 
+    public function show(Request $request, MapEvent $event)
+    {
+        $this->visible($request, $event);
+        $actor = $request->user();
+        $attendance = DB::table('map_event_attendances')->where('map_event_id', $event->id)->where('user_id', $actor->id)->first();
+        $count = DB::table('map_event_attendances')->where('map_event_id', $event->id)->count();
+
+        return response()->json(['data' => $this->present($this->located()->findOrFail($event->id), $actor->id, true, $attendance, $count)]);
+    }
+
+    public function update(Request $request, MapEvent $event, CommunityPhoto $photos)
+    {
+        $this->visible($request, $event);
+        $actor = $request->user();
+        abort_unless($event->user_id === $actor->id, 403, 'Solo el creador puede editar este evento.');
+        abort_if($event->cancelled_at, 422, 'No puedes editar un evento cancelado.');
+        abort_if($event->ends_at->isPast(), 422, 'No puedes editar un evento que ya finalizó.');
+
+        $hasVerifiedAttendance = DB::table('map_event_attendances')
+            ->where('map_event_id', $event->id)
+            ->whereNotNull('verified_at')
+            ->exists();
+
+        $rules = [
+            'title' => ['required', 'string', 'max:120'],
+            'description' => ['required', 'string', 'max:2000'],
+            'place' => ['required', 'string', 'max:180'],
+            'has_cost' => ['required', 'boolean'],
+            'frame' => ['nullable', Rule::in(array_keys(config('map-events.frames')))],
+            'photo' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=2400,max_height=2400'],
+        ];
+
+        if (! $hasVerifiedAttendance) {
+            $rules['latitude'] = ['required', 'numeric', 'between:-90,90'];
+            $rules['longitude'] = ['required', 'numeric', 'between:-180,180'];
+            $rules['starts_at'] = ['required', 'date', 'before:+1 year'];
+            $rules['ends_at'] = ['required', 'date', 'after:starts_at'];
+            if ($request->has('category')) {
+                $rules['category'] = ['required', Rule::in(array_keys(config('map-events.categories')))];
+                $rules['type'] = ['nullable', 'string', Rule::in(config('map-events.categories.'.(is_string($request->input('category')) ? $request->input('category') : '').'.types', []))];
+            }
+        }
+
+        $data = $request->validate($rules);
+
+        if (isset($data['starts_at'], $data['ends_at']) && Carbon::parse($data['ends_at'])->diffInHours(Carbon::parse($data['starts_at']), true) > 48) {
+            throw ValidationException::withMessages(['ends_at' => 'El evento puede durar hasta 48 horas.']);
+        }
+
+        $points = (int) DB::table('empathy_rewards')->where('user_id', $actor->id)->sum('points');
+        if (! empty($data['frame']) && $points < config('map-events.frames.'.$data['frame'].'.points')) {
+            throw ValidationException::withMessages(['frame' => 'Todavía no desbloqueaste este marco.']);
+        }
+
+        $newPhotoPath = $request->hasFile('photo') ? $photos->store($request->file('photo')) : null;
+        $oldPhotoPath = $event->photo_path;
+
+        try {
+            DB::transaction(function () use ($event, $data, $newPhotoPath, $hasVerifiedAttendance) {
+                $locked = MapEvent::whereKey($event->id)->lockForUpdate()->firstOrFail();
+                abort_if($locked->cancelled_at || $locked->ends_at->isPast(), 422, 'Este evento ya no puede ser editado.');
+
+                $attributes = collect($data)->except(['photo', 'latitude', 'longitude'])->all();
+                $update = [
+                    ...$attributes,
+                    'updated_at' => now(),
+                ];
+
+                if (! $hasVerifiedAttendance && isset($data['latitude'], $data['longitude'])) {
+                    $update['location'] = DB::raw('ST_SetSRID(ST_MakePoint('.(float) $data['longitude'].','.(float) $data['latitude'].'),4326)::geography');
+                }
+
+                if (isset($data['category'])) {
+                    $update['points'] = $data['category'] === 'support' && ! empty($data['has_cost'])
+                        ? 0
+                        : config('map-events.categories.'.$data['category'].'.points');
+                }
+
+                if ($newPhotoPath) {
+                    $update['photo_path'] = $newPhotoPath;
+                    $update['demo_photo_hash'] = null;
+                }
+
+                $locked->update($update);
+            });
+        } catch (\Throwable $error) {
+            if ($newPhotoPath) {
+                Storage::disk('local')->delete($newPhotoPath);
+            }
+            throw $error;
+        }
+
+        if ($newPhotoPath && $oldPhotoPath && ! str_starts_with($oldPhotoPath, 'demo-event-photos/')) {
+            Storage::disk('local')->delete($oldPhotoPath);
+        }
+
+        $updated = $this->located()->findOrFail($event->id);
+        $attendance = DB::table('map_event_attendances')->where('map_event_id', $event->id)->where('user_id', $actor->id)->first();
+        $count = DB::table('map_event_attendances')->where('map_event_id', $event->id)->count();
+
+        return response()->json([
+            'data' => $this->present($updated, $actor->id, true, $attendance, $count),
+            'message' => 'Evento actualizado correctamente.',
+        ]);
+    }
+
     public function cancel(Request $request, MapEvent $event)
     {
         $this->visible($request, $event);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { NButton, NCheckbox, NInput, useMessage } from 'naive-ui'
 import AppIcon, { type IconName } from '../components/AppIcon.vue'
 import AppSelect from '../components/AppSelect.vue'
@@ -13,6 +13,9 @@ import { api } from '../services/api'
 
 const { catalog, loadCatalog } = useMapEvents()
 const router = useRouter()
+const route = useRoute()
+const isEditing = computed(() => Boolean(route.params.id))
+const eventId = computed(() => route.params.id ? Number(route.params.id) : null)
 const message = useMessage()
 const categoryIcons: Record<string, IconName> = { community: 'users', emergency: 'bell', trend: 'calendar', support: 'hand' }
 const localTime = (date: Date) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
@@ -38,6 +41,7 @@ const typeOptions = computed(() => (selectedCategory.value?.types ?? []).map(val
 const reward = computed(() => form.category === 'support' && form.has_cost ? 0 : selectedCategory.value?.points ?? 0)
 
 watch(() => form.category, category => {
+  if (loading.value) return
   form.type = null
   if (category === 'emergency') {
     form.starts_at = localTime(new Date())
@@ -58,8 +62,26 @@ async function loadOptions() {
   error.value = ''
   try {
     await loadCatalog()
+    if (eventId.value) {
+      const res = await api<{ data: any }>(`/map-events/${eventId.value}`)
+      const ev = res.data
+      form.category = ev.category
+      form.type = ev.type
+      form.title = ev.title
+      form.description = ev.description
+      form.place = ev.place
+      form.starts_at = localTime(new Date(ev.starts_at))
+      form.ends_at = localTime(new Date(ev.ends_at))
+      form.has_cost = Boolean(ev.has_cost)
+      form.frame = ev.frame || ''
+      point.value = { lat: Number(ev.latitude), lng: Number(ev.longitude) }
+      confirmed.value = true
+      if (ev.has_photo) {
+        photoPreview.value = `/api/v1/map-events/${ev.id}/photo`
+      }
+    }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'No pudimos cargar las categorías de eventos.'
+    error.value = e instanceof Error ? e.message : 'No pudimos cargar la información.'
   } finally {
     loading.value = false
   }
@@ -105,8 +127,9 @@ async function submit() {
     body.append('latitude', String(point.value.lat))
     body.append('longitude', String(point.value.lng))
     if (photo.value) body.append('photo', photo.value)
-    await api('/map-events', { method: 'POST', body })
-    message.success('Tu evento ya está en el mapa comunitario.')
+    const url = isEditing.value ? `/map-events/${eventId.value}` : '/map-events'
+    await api(url, { method: 'POST', body })
+    message.success(isEditing.value ? 'Tu evento ha sido actualizado.' : 'Tu evento ya está en el mapa comunitario.')
     await router.push({ name: 'neighbors' })
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No pudimos crear el evento. Puedes volver a intentarlo.'
@@ -123,8 +146,8 @@ async function submit() {
     </RouterLink>
     <header class="page-heading event-page-heading">
       <div>
-        <h1 id="create-map-event-title">Comparte en el mapa</h1>
-        <p>Un encuentro, una mano o una causa cerca de ti.</p>
+        <h1 id="create-map-event-title">{{ isEditing ? 'Editar evento' : 'Comparte en el mapa' }}</h1>
+        <p>{{ isEditing ? 'Actualiza los detalles o el punto de encuentro de tu evento.' : 'Un encuentro, una mano o una causa cerca de ti.' }}</p>
       </div>
       <span class="event-page-icon"><AppIcon name="map" :size="24" /></span>
     </header>
@@ -203,7 +226,7 @@ async function submit() {
           <NButton v-if="!loading && !catalog.categories.length" secondary round @click="loadOptions">Volver a cargar</NButton>
           <NButton v-else type="primary" round attr-type="submit" :loading="saving" :disabled="locating || loading">
             <template #icon><AppIcon name="pin" :size="18" /></template>
-            Crear evento en el mapa
+            {{ isEditing ? 'Guardar cambios' : 'Crear evento en el mapa' }}
           </NButton>
         </div>
       </fieldset>

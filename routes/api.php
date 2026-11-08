@@ -40,6 +40,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('map-events/catalog', [MapEventController::class, 'catalog']);
         Route::get('map-events', [MapEventController::class, 'index']);
+        Route::get('map-events/{event}', [MapEventController::class, 'show'])->whereNumber('event');
+        Route::match(['post', 'patch'], 'map-events/{event}', [MapEventController::class, 'update'])->whereNumber('event')->middleware('throttle:20,1,map-events');
         Route::post('map-events', [MapEventController::class, 'store'])->middleware(['can:posts.create', 'throttle:6,1,map-events']);
         Route::post('map-events/{event}/join', [MapEventController::class, 'join'])->whereNumber('event')->middleware('throttle:20,1,map-join');
         Route::delete('map-events/{event}/join', [MapEventController::class, 'leave'])->whereNumber('event');

@@ -81,7 +81,19 @@ function render(){
     void setMarkerPhoto(event, element, version)
     const badge=document.createElement('div');badge.className=event.category==='emergency'?'event-map-badge event-map-badge--emergency':'event-map-badge'
     const label=document.createElement('span');label.className='neighbor-pin-name event-pin-title';label.textContent=(event.category==='emergency'?'🚨 ':'')+event.title;badge.append(element,label)
-    const marker=L.marker([event.latitude,event.longitude],{icon:L.divIcon({html:badge,className:'event-map-pin',iconSize:[62,74],iconAnchor:[31,26]}),title:`${event.title} · ${category?.label}`,keyboard:true}).addTo(layer)
+    const distMeters = (props.center?.lat && props.center?.lng)
+      ? Math.round(L.latLng(props.center).distanceTo([event.latitude, event.longitude]))
+      : null
+    const distText = distMeters !== null
+      ? (distMeters < 1000 ? `${distMeters} m` : `${(distMeters / 1000).toFixed(1).replace('.0', '')} km`)
+      : ''
+    if (distText) {
+      const distLabel = document.createElement('span')
+      distLabel.className = 'event-pin-dist'
+      distLabel.textContent = distText
+      badge.append(distLabel)
+    }
+    const marker=L.marker([event.latitude,event.longitude],{icon:L.divIcon({html:badge,className:'event-map-pin',iconSize:[66,88],iconAnchor:[33,26]}),title:`${event.title} · ${category?.label}${distText ? ` · ${distText}` : ''}`,keyboard:true}).addTo(layer)
     marker.on('click',()=>emit('select',event.id));marker.getElement()?.setAttribute('aria-label',`Ver evento: ${event.title}`)
     marker.setZIndexOffset(event.id===props.selected?1000:event.category==='emergency'?500:0)
   }
@@ -189,6 +201,17 @@ onBeforeUnmount(() => {
   font-size: 10px;
   font-weight: 900;
   line-height: 1.5;
+}
+.event-pin-dist {
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--lavender);
+  background: var(--surface);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px #0006;
 }
 .event-map-face {
   position: relative;

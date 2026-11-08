@@ -86,6 +86,12 @@ export const router = createRouter({
           meta: { title: 'Crear en el mapa', section: 'create' },
         },
         {
+          path: 'mapa/:id/editar',
+          name: 'edit-map-event',
+          component: () => import('./views/CreateMapEventView.vue'),
+          meta: { title: 'Editar evento', section: 'create' },
+        },
+        {
           path: 'publicar/actividad',
           name: 'create-activity',
           component: () => import('./views/PublishView.vue'),
