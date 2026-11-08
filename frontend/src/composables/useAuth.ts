@@ -1,4 +1,5 @@
 import { shallowRef } from 'vue'
+import { connectionOffline } from '../native/connectivity'
 import { api, ApiError, clearSession, saveSession } from '../services/api'
 
 export interface NeighborProfile {
@@ -28,7 +29,11 @@ export const currentUser = shallowRef<AuthUser | null>(null)
 export const sessionError = shallowRef('')
 let pending: { token: string; request: Promise<boolean> } | null = null
 let expiration: ReturnType<typeof setTimeout> | undefined
+let verifiedToken: string | null = null
+let verifiedUntil = 0
 function ended() {
+  verifiedToken = null
+  verifiedUntil = 0
   currentUser.value = null
   clearTimeout(expiration)
 }
@@ -38,12 +43,15 @@ if (import.meta.hot) import.meta.hot.dispose(() => { clearTimeout(expiration); w
 export async function validateSession(): Promise<boolean> {
   const token = sessionStorage.getItem('masi.api.token')
   if (!token) { currentUser.value = null; return false }
+  if (token === verifiedToken && verifiedUntil > 0 && Date.now() >= verifiedUntil) { clearSession(); return false }
   if (pending?.token === token) return pending.request
   const request = (async () => {
     try {
       const result = await api<{ user: AuthUser; expires_at: string | null }>('/profile', { cache: 'no-store', signal: AbortSignal.timeout(8000) })
       if (sessionStorage.getItem('masi.api.token') !== token) return false
       currentUser.value = result.user
+      verifiedToken = token
+      verifiedUntil = result.expires_at ? Date.parse(result.expires_at) : 0
       sessionStorage.setItem('masi.api.user', JSON.stringify(result.user))
       sessionError.value = ''
       clearTimeout(expiration)
@@ -57,6 +65,9 @@ export async function validateSession(): Promise<boolean> {
       }
       return true
     } catch (error) {
+      // Read-only offline use only for a session already verified in this runtime,
+      // and never beyond the expiry reported by Laravel. No offline cold login.
+      if (error instanceof ApiError && error.status === 0 && connectionOffline && token === verifiedToken && sessionStorage.getItem('masi.api.token') === token && currentUser.value && Date.now() < verifiedUntil) return true
       if (sessionStorage.getItem('masi.api.token') === token || (!sessionStorage.getItem('masi.api.token') && error instanceof ApiError && error.status === 401)) {
         currentUser.value = null
         sessionError.value = error instanceof ApiError && error.status === 401

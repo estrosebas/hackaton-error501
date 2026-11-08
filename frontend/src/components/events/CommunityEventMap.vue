@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed,onMounted,onBeforeUnmount,watch,useTemplateRef,ref,shallowRef} from 'vue'
 import * as L from 'leaflet'
+import {localTileLayer} from '../../native/tileLayer'
 import 'leaflet/dist/leaflet.css'
 import type {MapEvent,MapCategory,EventFrame} from '../../composables/useMapEvents'
 import {apiImage} from '../../services/api'
@@ -91,7 +92,7 @@ function updateRadarPlayback() {
 onMounted(()=>{
   if(!container.value)return
   map=L.map(container.value,{zoomControl:false,scrollWheelZoom:false,minZoom:3,zoomAnimation:!reducedMotion(),fadeAnimation:!reducedMotion(),markerZoomAnimation:!reducedMotion()}).setView(props.center,initialZoom);map.attributionControl.setPrefix(false)
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).on('tileerror',()=>{tileError.value=true}).addTo(map)
+  localTileLayer().on('tileerror',()=>{tileError.value=true}).addTo(map)
   layer=L.layerGroup().addTo(map)
   if (props.pick) {
     const icon = L.divIcon({

@@ -9,22 +9,26 @@ import CommunityEventMap from '../components/events/CommunityEventMap.vue'
 import MapNeighborhoodAvatars from '../components/events/MapNeighborhoodAvatars.vue'
 import MapEventPhoto from '../components/events/MapEventPhoto.vue'
 import {useMapEvents,currentPosition,type MapEvent} from '../composables/useMapEvents'
+import {Capacitor} from '@capacitor/core'
+import {backgroundTracking,backgroundError,backgroundPosition,startBackgroundLocation,stopBackgroundLocation} from '../native/backgroundLocation'
 import {currentUser} from '../composables/useAuth'
 const {events,catalog,error,loading,hasMore,load,action}=useMapEvents()
 const category=ref(''),selected=ref<number>(),busy=ref(false),actionError=ref(''),notice=ref(''),tracking=ref(false)
 const search=ref(''),radius=ref(0),mode=ref<'map'|'list'>('map'),detailsOpen=ref(false),rewardsOpen=ref(false)
 const radiusOptions=[{label:'Todo',value:0},{label:'300 m',value:300},{label:'600 m',value:600},{label:'1 km',value:1000}]
 const center=ref({lat:Number(currentUser.value?.latitude)||-12.0464,lng:Number(currentUser.value?.longitude)||-77.0428})
+watch(backgroundPosition,position=>{if(position)center.value=position})
 const visible=computed(()=>events.value.filter(event=>(!category.value||event.category===category.value)&&(!search.value||`${event.title} ${event.description} ${event.place}`.toLocaleLowerCase('es').includes(search.value.toLocaleLowerCase('es')))&&(!radius.value||latLng(center.value).distanceTo([event.latitude,event.longitude])<=radius.value)))
 const active=computed(()=>events.value.find(event=>event.id===selected.value))
 const categoryOf=(event:MapEvent)=>catalog.value.categories.find(item=>item.id===event.category)
 const date=(value:string)=>new Date(value).toLocaleString('es-PE',{dateStyle:'medium',timeStyle:'short'})
 function openEvent(id:number){selected.value=id;actionError.value='';detailsOpen.value=true}
+async function stopTracking(){tracking.value=false;try{await stopBackgroundLocation()}catch{actionError.value='No pudimos detener el servicio de ubicación. Intenta nuevamente.'}}
 watch([category,search,radius],()=>{selected.value=undefined;detailsOpen.value=false})
 async function run(event:MapEvent,kind:'join'|'cancel',method='POST'){if(busy.value)return;busy.value=true;actionError.value='';notice.value='';try{await action(event,kind,undefined,method);notice.value=kind==='cancel'?'Evento cancelado.':method==='DELETE'?'Inscripción cancelada.':'Estás inscrito. Valida tu asistencia cuando estés en el lugar.'}catch(e){actionError.value=e instanceof Error?e.message:'No pudimos completar la acción.'}finally{busy.value=false}}
 async function locate(manual?:MapEvent){
   if(busy.value||document.hidden)return;busy.value=true;actionError.value='';notice.value=''
-  try{const location=await currentPosition();center.value={lat:location.latitude,lng:location.longitude};tracking.value=true
+  try{const location=await currentPosition();if(Capacitor.isNativePlatform())await startBackgroundLocation();center.value={lat:location.latitude,lng:location.longitude};tracking.value=true
     const now=Date.now(),candidates=manual?[manual]:events.value.filter(event=>event.joined&&!event.attended&&Date.parse(event.starts_at)<=now&&Date.parse(event.ends_at)>=now)
     for(const event of candidates){try{await action(event,'check-in',location);notice.value=`Asistencia registrada · +${event.points} puntos de empatía.`}catch(e){if(manual)throw e}}
     if(!candidates.length)notice.value='Ubicación activada. Se verificará tu asistencia a eventos inscritos mientras este mapa esté abierto.'
@@ -54,7 +58,7 @@ onBeforeUnmount(()=>clearInterval(timer))
       </div>
       <MapNeighborhoodAvatars v-if="mode === 'map'" />
     </header>
-    <p v-if="error||actionError" role="alert" class="map-feedback">{{error||actionError}}</p><p v-if="notice" role="status" class="map-feedback">{{notice}}</p>
+    <div v-if="backgroundTracking" class="map-feedback">Ubicación en segundo plano activa <button type="button" class="text-link" @click="stopTracking()">Detener</button></div><p v-if="backgroundError" class="map-feedback" role="status">{{backgroundError}}</p><p v-if="error||actionError" role="alert" class="map-feedback">{{error||actionError}}</p><p v-if="notice" role="status" class="map-feedback">{{notice}}</p>
     <div v-if="mode==='map'" class="neighbor-map-stage">
       <CommunityEventMap fill :center="center" :radius="radius" :events="visible" :categories="catalog.categories" :frames="catalog.frames" :selected="selected" @select="openEvent"/>
       <button class="map-demo-label map-zone-button" type="button" :disabled="busy" @click="locate()"><AppIcon name="locate" :size="11"/>{{tracking?'Ubicación activa':'Activar ubicación'}}</button>

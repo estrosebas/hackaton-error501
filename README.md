@@ -4,6 +4,8 @@ Base del proyecto de comunidad vecinal: Laravel 12, Vue 3, PostgreSQL y un micro
 
 **Para instalar en otra computadora o dar instrucciones a un agente:** [LEVANTAR-PROYECTO.md](LEVANTAR-PROYECTO.md). Incluye PostgreSQL/PostGIS portable, requisitos, arranque completo y solución de problemas.
 
+**Android / Capacitor:** [docs/android-capacitor.md](docs/android-capacitor.md), con plugins, build nativo, ubicación en segundo plano y estado de la caché offline.
+
 ## Estado actual
 
 - Registro de vecinos con DNI, contraseña, contacto, distrito, barrio y fotografía.

@@ -1,3 +1,5 @@
+import { readMapSnapshot,saveMapSnapshot } from '../native/offlineMap'
+import { connectionOffline } from '../native/connectivity'
 import { ref, onBeforeUnmount } from 'vue'
 import { Capacitor } from '@capacitor/core'
 import { Geolocation } from '@capacitor/geolocation'
@@ -14,17 +16,35 @@ export async function currentPosition(){
 }
 export function useMapEvents(){
   const events=ref<MapEvent[]>([]),catalog=ref<MapCatalog>({points:0,categories:[],frames:[]}),error=ref(''),loading=ref(false),hasMore=ref(false)
-  const controller=new AbortController()
+  const offline=ref(false),cachedAt=ref<number>(); const controller=new AbortController()
   const options={signal:controller.signal,cache:'no-store' as RequestCache}
   async function loadCatalog(){catalog.value=await api<MapCatalog>('/map-events/catalog',options)}
-  async function load(){loading.value=true;error.value='';try{const [result]=await Promise.all([api<{data:MapEvent[];has_more:boolean}>('/map-events',options),loadCatalog()]);events.value=result.data;hasMore.value=result.has_more}catch(e){if(!controller.signal.aborted)error.value=e instanceof Error?e.message:'No pudimos cargar el mapa.'}finally{loading.value=false}}
-  async function action(event:MapEvent,kind:'join'|'check-in'|'cancel',body?:unknown,method='POST'){
+  async function load(){
+    const token=sessionStorage.getItem('masi.api.token')
+    loading.value=true;error.value=''
+    try{
+      if(connectionOffline)throw new Error('Sin conexión')
+      const [result]=await Promise.all([api<{data:MapEvent[];has_more:boolean}>('/map-events',options),loadCatalog()])
+      if(controller.signal.aborted||sessionStorage.getItem('masi.api.token')!==token)return
+      events.value=result.data;hasMore.value=result.has_more;offline.value=false
+      await saveMapSnapshot({events:events.value,catalog:catalog.value}).catch(()=>{})
+    }catch(e){
+      if(controller.signal.aborted||sessionStorage.getItem('masi.api.token')!==token)return
+      const cache=await readMapSnapshot<{events:MapEvent[];catalog:MapCatalog}>()
+      if(cache&&!controller.signal.aborted&&sessionStorage.getItem('masi.api.token')===token){events.value=cache.data.events.filter(event=>Date.parse(event.ends_at)>Date.now());catalog.value=cache.data.catalog;cachedAt.value=cache.at;offline.value=true;error.value='Sin conexión. Mostrando la última copia guardada; los eventos pueden haber cambiado.'}
+      else error.value=e instanceof Error?e.message:'No pudimos cargar el mapa.'
+    }finally{loading.value=false}
+  }  async function action(event:MapEvent,kind:'join'|'check-in'|'cancel',body?:unknown,method='POST'){
+    if(offline.value)throw new Error('Conéctate para inscribirte o validar asistencia.')
     const result=await api<{data:MapEvent}>(`/map-events/${event.id}/${kind}`,{...options,method,...(body?{body:JSON.stringify(body)}:{})})
     if(kind==='cancel')events.value=events.value.filter(item=>item.id!==event.id)
     else if(method==='DELETE')events.value=events.value.map(item=>item.id===event.id?{...item,joined:false,participants:Math.max(0,item.participants-1)}:item)
     else events.value=events.value.map(item=>item.id===event.id?result.data:item)
     if(kind==='check-in')await loadCatalog()
   }
-  onBeforeUnmount(()=>controller.abort())
-  return {events,catalog,error,loading,hasMore,load,loadCatalog,action}
+  const reconnect=()=>{void load()}
+  const disconnected=()=>{offline.value=true;error.value='Sin conexión. Eventos guardados; pueden haber cambiado. Conéctate para validar asistencia.'}
+  window.addEventListener('online',reconnect);window.addEventListener('offline',disconnected)
+  onBeforeUnmount(()=>{controller.abort();window.removeEventListener('online',reconnect);window.removeEventListener('offline',disconnected)})
+  return {events,catalog,error,loading,hasMore,offline,cachedAt,load,loadCatalog,action}
 }
