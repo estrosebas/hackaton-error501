@@ -540,11 +540,11 @@
   text-align: center;
 }
 @media (max-height: 760px) {
-  .nearby-page {
+  .nearby-page:not(.community-events-explorer--map) {
     height: auto;
     min-height: calc(100dvh - 168px);
   }
-  .neighbor-map-stage {
+  .neighbor-map-stage:not(.neighbor-map-stage--full) {
     display: flex;
     flex-direction: column;
     min-height: 0;

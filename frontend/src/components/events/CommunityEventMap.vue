@@ -245,9 +245,35 @@ onBeforeUnmount(() => {
 .event-map-canvas .leaflet-tile-pane { filter: invert(1) hue-rotate(178deg) saturate(.48) brightness(.78) contrast(.94); }
 .event-map-canvas .leaflet-control-attribution { padding: 2px 6px; color: var(--muted); background: var(--surface); font-size: 10px; }
 .event-map-canvas .leaflet-control-attribution a { color: var(--lavender); }
-.event-map-controls { position: absolute; top: 49px; right: 11px; z-index: 1; display: grid; gap: 7px; }
-.event-map-controls .n-button { width: 44px; height: 44px; color: var(--text); background: var(--surface-raised); }
-.event-map-controls .n-button:last-child { margin-top: 5px; color: var(--coral); }
+.event-map-controls {
+  position: absolute;
+  top: 136px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.event-map-controls .n-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.event-map-controls .n-button:active {
+  transform: scale(0.92);
+  background: rgba(30, 41, 59, 1);
+}
+.event-map-controls .n-button:last-child {
+  color: var(--coral, #ff6389);
+  border-color: rgba(255, 99, 137, 0.35);
+}
 .event-map-origin { pointer-events: none; }
 .event-origin-avatar {
   position: relative;
@@ -322,5 +348,4 @@ onBeforeUnmount(() => {
 }
 .event-map-picker .map-tile-error { top: 11px; }
 @media (min-width: 760px) { .event-map-picker .event-map-canvas { height: 350px; } }
-@media (max-height: 760px) { .event-map-fill { position: relative; height: clamp(275px, 45dvh, 345px); } }
 </style>
