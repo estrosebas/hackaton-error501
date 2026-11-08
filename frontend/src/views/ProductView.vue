@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import {
   NAvatar,
   NButton,
@@ -11,54 +11,77 @@ import {
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import CurrentUserAvatar from '../components/auth/CurrentUserAvatar.vue'
-import { currentUser } from '../composables/useAuth'
-import { formatPrice, useMarketplace } from '../composables/useMarketplace'
+import ListingPhoto from '../components/marketplace/ListingPhoto.vue'
+import { fetchListing, formatPrice, markSold, rememberListing, removeListing, setFavorite, type Listing } from '../composables/useMarketplace'
+import { ApiError } from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
-const { listings, favoriteIds, toggleFavorite, markSold, removeListing, rememberListing } =
-  useMarketplace()
-const listing = computed(() =>
-  listings.value.find((item) => item.id === route.params.id),
-)
-const saved = computed(() =>
-  listing.value ? favoriteIds.value.includes(listing.value.id) : false,
-)
-watch(() => listing.value?.id, (id) => {
-  if (id) rememberListing(id)
+const listing = shallowRef<Listing>()
+const loading = shallowRef(true)
+const busy = shallowRef(false)
+const error = shallowRef('')
+const attempt = shallowRef(0)
+const listingId = computed(() => route.name === 'product' ? String(route.params.id) : '')
+
+watch([listingId, attempt], async ([id], _, onCleanup) => {
+  const request = new AbortController()
+  onCleanup(() => request.abort())
+  listing.value = undefined
+  if (!id) return
+  loading.value = true
+  error.value = ''
+  try {
+    const result = await fetchListing(id, request.signal)
+    if (request.signal.aborted) return
+    listing.value = result
+    if (!result.sold) rememberListing(result.id)
+  } catch (e) {
+    if (!request.signal.aborted && !(e instanceof ApiError && e.status === 404)) {
+      error.value = e instanceof Error ? e.message : 'No pudimos cargar el anuncio.'
+    }
+  } finally {
+    if (!request.signal.aborted) loading.value = false
+  }
 }, { immediate: true })
 
-function save() {
-  if (!listing.value) return
+async function updateListing(action: (item: Listing) => Promise<void>, fallback: string) {
+  const item = listing.value
+  if (!item || busy.value) return
+  busy.value = true
   try {
-    toggleFavorite(listing.value.id)
-  } catch {
-    message.error(
-      'No pudimos guardar el producto. Revisa el almacenamiento de tu navegador.',
-    )
+    await action(item)
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : fallback)
+  } finally {
+    busy.value = false
   }
+}
+
+function save() {
+  return updateListing(async (item) => {
+    const saved = await setFavorite(item.id, !item.saved)
+    if (listing.value === item) listing.value = { ...item, saved }
+  }, 'No pudimos actualizar tus guardados.')
 }
 
 function completeSale() {
-  if (!listing.value?.owned) return
-  try {
-    markSold(listing.value.id)
+  return updateListing(async (item) => {
+    const updated = await markSold(item.id)
+    if (listing.value !== item) return
+    listing.value = updated
     message.success('Tu anuncio quedó marcado como vendido')
-  } catch {
-    message.error('No pudimos actualizar el anuncio. Inténtalo de nuevo.')
-  }
+  }, 'No pudimos actualizar el anuncio.')
 }
 
 function deleteListing() {
-  if (!listing.value?.owned) return
-  try {
-    removeListing(listing.value.id)
+  return updateListing(async (item) => {
+    await removeListing(item.id)
+    if (listing.value !== item) return
     message.success('Anuncio eliminado')
-    router.replace({ name: 'market-mine' })
-  } catch {
-    message.error('No pudimos eliminar el anuncio. Inténtalo de nuevo.')
-  }
+    await router.replace({ name: 'market-mine' })
+  }, 'No pudimos eliminar el anuncio.')
 }
 </script>
 
@@ -72,20 +95,22 @@ function deleteListing() {
         circle
         quaternary
         :aria-label="
-          saved ? 'Quitar producto de guardados' : 'Guardar producto'
+          listing.saved ? 'Quitar producto de guardados' : 'Guardar producto'
         "
-        :aria-pressed="saved"
+        :aria-pressed="listing.saved"
+        :disabled="busy"
         @click="save"
         ><AppIcon name="bookmark" :size="21"
       /></NButton>
     </div>
-    <template v-if="listing">
-      <img
+    <p v-if="loading" class="empty-market" role="status">Cargando anuncio…</p>
+    <template v-else-if="listing">
+      <ListingPhoto
+        :key="listing.id"
         class="product-hero-image"
-        :src="listing.image"
+        :listing-id="listing.id"
         :alt="listing.title"
-        width="720"
-        height="520"
+        eager
       />
       <div class="product-detail-content">
         <div class="product-detail-price">
@@ -112,11 +137,10 @@ function deleteListing() {
             v-else
             round
             :size="46"
-            :src="listing.avatar"
-            :img-props="{ alt: '' }"
-          />
+            aria-hidden="true"
+          >{{ listing.seller.name.trim().charAt(0) }}</NAvatar>
           <div>
-            <strong>{{ listing.owned ? currentUser?.name || 'Tú' : listing.seller }}</strong>
+            <strong>{{ listing.owned ? 'Tú' : listing.seller.name }}</strong>
             <p>Vecino de {{ listing.neighborhood }}</p>
           </div>
           <span class="seller-label">{{
@@ -128,28 +152,18 @@ function deleteListing() {
           type="primary"
           block
           size="large"
-          :disabled="listing.sold"
+          :disabled="listing.sold || busy"
           @click="completeSale"
           >{{
             listing.sold ? 'Producto vendido' : 'Marcar como vendido'
           }}</NButton
-        ><NButton
-          v-else
-          type="primary"
-          block
-          size="large"
-          :aria-pressed="saved"
-          @click="save"
-          ><template #icon
-            ><AppIcon
-              :name="saved ? 'check' : 'bookmark'"
-              :size="19" /></template
-          >{{
-            saved
-              ? 'Guardado en tus favoritos'
-              : 'Me interesa · Guardar producto'
-          }}</NButton
         >
+        <RouterLink v-else :to="{ name: 'messages', query: { to: listing.seller.id } }" custom v-slot="{ href, navigate }">
+          <NButton tag="a" :href="href" type="primary" block size="large" @click="navigate">
+            <template #icon><AppIcon name="send" :size="19" /></template>
+            Contactar al vendedor
+          </NButton>
+        </RouterLink>
         <div v-if="listing.owned" class="delete-listing-action">
           <NPopconfirm
             positive-text="Eliminar"
@@ -157,20 +171,17 @@ function deleteListing() {
             @positive-click="deleteListing"
           >
             <template #trigger
-              ><NButton text type="error">Eliminar anuncio</NButton></template
+              ><NButton text type="error" :disabled="busy">Eliminar anuncio</NButton></template
             >
             ¿Quieres eliminar este anuncio de tu mercadito?
           </NPopconfirm>
         </div>
-        <p class="marketplace-demo-note">
-          {{
-            listing.owned
-              ? 'Tu anuncio está guardado en este dispositivo.'
-              : 'Producto de ejemplo para conocer el mercadito.'
-          }}
-        </p>
       </div>
     </template>
+    <div v-else-if="error" class="empty-market">
+      <p role="alert">{{ error }}</p>
+      <NButton @click="attempt++">Reintentar</NButton>
+    </div>
     <div v-else class="empty-market">
       <NEmpty description="Este anuncio ya no está disponible"
         ><template #extra

@@ -542,13 +542,6 @@ svg {
   font-size: 13px;
   line-height: 1.6;
 }
-.marketplace-demo-note {
-  margin: 20px 18px;
-  color: var(--muted);
-  font-size: 11px;
-  text-align: center;
-  line-height: 1.6;
-}
 .empty-market {
   grid-column: 1 / -1;
   padding: 24px 12px;

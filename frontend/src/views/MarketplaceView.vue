@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { NButton, NEmpty, NInput, NSelect } from 'naive-ui'
+import { NButton, NEmpty, NInput, NSelect, useMessage } from 'naive-ui'
 import { RouterLink, useRoute } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import LocalPageHeading from '../components/layout/LocalPageHeading.vue'
@@ -8,10 +8,11 @@ import MarketplaceHighlights from '../components/marketplace/MarketplaceHighligh
 import ProductCard from '../components/marketplace/ProductCard.vue'
 import type { Panel } from '../components/community/CommunityPanels.vue'
 import { useCommunity } from '../composables/useCommunity'
-import { useMarketplace } from '../composables/useMarketplace'
+import { useMarketplace, type Listing, type MarketScope, type MarketView } from '../composables/useMarketplace'
+import { currentUser } from '../composables/useAuth'
 
 const { neighborhood } = useCommunity()
-const { listings, favoriteIds, recentlyViewed } = useMarketplace()
+const message = useMessage()
 const route = useRoute()
 const emit = defineEmits<{ openPanel: [panel: Panel] }>()
 const search = shallowRef('')
@@ -22,9 +23,12 @@ const searchTheme = {
   placeholderColor: 'var(--muted)',
 }
 const areaTheme = { peers: { InternalSelection: { borderRadius: '8px', heightLarge: '44px' } } }
-const area = shallowRef('nearby')
+const area = shallowRef<MarketScope>('nearby')
 const showMine = computed(() => route.name === 'market-mine')
 const showFavorites = computed(() => route.name === 'market-saved')
+const view = computed<MarketView>(() => showMine.value ? 'mine' : showFavorites.value ? 'saved' : 'all')
+const filters = computed(() => ({ view: view.value, scope: area.value, q: search.value.trim() }))
+const { listings, total, nextCursor, loading, error, saving, recentlyViewed, load, toggleFavorite } = useMarketplace(filters)
 const hasFilters = computed(
   () => Boolean(search.value.trim()) || (!showMine.value && area.value !== 'nearby'),
 )
@@ -34,8 +38,8 @@ const title = computed(() => {
   return 'El mercadito'
 })
 const areaOptions = computed(() => [
-  { label: 'Alrededores', value: 'nearby' },
-  { label: `Solo ${neighborhood.value}`, value: 'neighborhood' },
+  { label: 'Todo mi distrito', value: 'nearby' },
+  { label: `Solo ${currentUser.value?.neighborhood || 'mi barrio'}`, value: 'neighborhood' },
 ])
 const emptyTitle = computed(() => {
   if (hasFilters.value) return 'No encontramos anuncios con esos filtros'
@@ -43,33 +47,18 @@ const emptyTitle = computed(() => {
   if (showFavorites.value) return 'Aún no tienes productos guardados'
   return 'Todavía no hay productos por aquí'
 })
-const filteredListings = computed(() => {
-  const term = search.value.trim().toLocaleLowerCase('es')
-  return listings.value.filter((listing) => {
-    const matchesOwner = !showMine.value || listing.owned
-    const matchesFavorite =
-      !showFavorites.value || favoriteIds.value.includes(listing.id)
-    const matchesArea =
-      showMine.value ||
-      area.value === 'nearby' ||
-      listing.neighborhood === neighborhood.value
-    const matchesTerm =
-      !term ||
-      `${listing.title} ${listing.description} ${listing.category}`
-        .toLocaleLowerCase('es')
-        .includes(term)
-    return (
-      matchesOwner &&
-      matchesFavorite &&
-      matchesArea &&
-      matchesTerm &&
-      (showMine.value || !listing.sold)
-    )
-  })
-})
 const featuredListing = computed(() =>
-  route.name === 'market' && !hasFilters.value ? filteredListings.value[0] : undefined,
+  view.value === 'all' && !hasFilters.value ? listings.value[0] : undefined,
 )
+const latest = computed(() => listings.value.slice(1))
+
+async function save(listing: Listing) {
+  try {
+    await toggleFavorite(listing)
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : 'No pudimos actualizar tus guardados.')
+  }
+}
 
 function resetFilters() {
   search.value = ''
@@ -97,6 +86,7 @@ function resetFilters() {
           size="large"
           :theme-overrides="searchTheme"
           clearable
+          :maxlength="100"
           placeholder="Buscar…"
           :input-props="{ 'aria-label': 'Buscar productos', inputmode: 'search' }"
         >
@@ -124,40 +114,52 @@ function resetFilters() {
         </RouterLink>
       </nav>
     </header>
+    <p v-if="loading && !listings.length" class="empty-market" role="status">Cargando anuncios…</p>
     <MarketplaceHighlights
-      v-if="featuredListing"
+      v-else-if="featuredListing"
       :featured="featuredListing"
-      :latest="filteredListings.slice(1)"
+      :latest="latest"
       :recent="recentlyViewed"
+      :saving="saving"
+      @toggle-favorite="save"
     />
-    <template v-else>
+    <template v-else-if="listings.length || !error">
       <div class="marketplace-results">
         <h2 id="market-results-title">Resultados</h2>
         <span role="status">
-          {{ filteredListings.length }}
-          {{ filteredListings.length === 1 ? 'anuncio' : 'anuncios' }}
+          {{ total }}
+          {{ total === 1 ? 'anuncio' : 'anuncios' }}
         </span>
       </div>
-      <ul v-if="filteredListings.length" class="product-feed" role="list" aria-labelledby="market-results-title">
-        <ProductCard v-for="listing in filteredListings" :key="listing.id" :listing="listing" />
+      <ul v-if="listings.length" class="product-feed" role="list" aria-labelledby="market-results-title">
+        <ProductCard
+          v-for="listing in listings"
+          :key="listing.id"
+          :listing="listing"
+          :saving="saving.has(listing.id)"
+          @toggle-favorite="save"
+        />
       </ul>
       <div v-else class="empty-market">
         <NEmpty :description="emptyTitle">
           <template #extra>
             <NButton v-if="hasFilters" @click="resetFilters">Limpiar filtros</NButton>
-            <RouterLink v-else-if="showMine" class="marketplace-sell" :to="{ name: 'create-product' }">
-              Publicar un producto
-            </RouterLink>
             <RouterLink v-else-if="showFavorites" class="text-link" :to="{ name: 'market' }" replace>
               Ver todos los anuncios <AppIcon name="arrow" :size="15" />
+            </RouterLink>
+            <RouterLink v-else class="marketplace-sell" :to="{ name: 'create-product' }">
+              Publicar un producto
             </RouterLink>
           </template>
         </NEmpty>
       </div>
     </template>
-    <p class="marketplace-demo-note">
-      Anuncios de ejemplo · Tus anuncios se guardan en este dispositivo.
-    </p>
+    <div v-if="error || nextCursor" class="marketplace-pagination">
+      <p v-if="error" role="alert">{{ error }}</p>
+      <NButton :loading="loading" @click="load(Boolean(nextCursor))">
+        {{ error ? 'Reintentar' : 'Cargar más anuncios' }}
+      </NButton>
+    </div>
   </section>
 </template>
 
@@ -258,7 +260,7 @@ function resetFilters() {
   padding: 0;
   list-style: none;
 }
-.marketplace-page > .marketplace-demo-note {
+.marketplace-pagination {
   margin: 16px 0 24px;
   text-align: start;
 }

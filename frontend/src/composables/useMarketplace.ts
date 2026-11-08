@@ -1,18 +1,9 @@
-import { computed, ref, watch } from 'vue'
+import { computed, onScopeDispose, shallowReactive, shallowRef, watch, type Ref } from 'vue'
+import { api } from '../services/api'
 import { currentUser } from './useAuth'
 
-export const productCategories = [
-  'Bicicletas',
-  'Hogar',
-  'Moda',
-  'Tecnología',
-  'Otros',
-] as const
-export const productConditions = [
-  'Como nuevo',
-  'Buen estado',
-  'Con detalles',
-] as const
+export const productCategories = ['Bicicletas', 'Hogar', 'Moda', 'Tecnología', 'Otros'] as const
+export const productConditions = ['Como nuevo', 'Buen estado', 'Con detalles'] as const
 
 export interface Listing {
   id: string
@@ -21,204 +12,163 @@ export interface Listing {
   category: string
   condition: string
   description: string
-  image: string
   neighborhood: string
-  seller: string
-  avatar: string
+  seller: { id: number; name: string }
   createdAt: string
   owned: boolean
   sold: boolean
+  saved: boolean
 }
 
-export type NewListing = Pick<
-  Listing,
-  | 'title'
-  | 'price'
-  | 'category'
-  | 'condition'
-  | 'description'
-  | 'image'
-  | 'neighborhood'
->
-const storageKey = 'masi-marketplace-v1'
-const favoritesKey = 'masi-marketplace-favorites-v1'
-
-const exampleListings: Listing[] = [
-  {
-    id: 'bicicleta-paseo',
-    title: 'Bicicleta de paseo',
-    price: 280,
-    category: 'Bicicletas',
-    condition: 'Buen estado',
-    description:
-      'Una bici cómoda para moverse por el barrio. Frenos y cambios funcionando, asiento ajustable y lista para usar. La vendo porque ya tengo otra. Podemos coordinar para que la veas en San Blas.',
-    image: '/images/bicycle.jpg',
-    neighborhood: 'San Blas',
-    seller: 'Miguel',
-    avatar: '/images/miguel.jpg',
-    createdAt: '2026-11-05T15:00:00-05:00',
-    owned: false,
-    sold: false,
-  },
-  {
-    id: 'ceramica-artesanal',
-    title: 'Piezas de cerámica',
-    price: 65,
-    category: 'Hogar',
-    condition: 'Como nuevo',
-    description:
-      'Piezas de cerámica artesanal, cuidadas y sin rajaduras. Ideales para decorar tu cocina o compartir una mesa bonita. Se venden juntas y se recogen en el barrio.',
-    image: '/images/ceramics.jpg',
-    neighborhood: 'San Blas',
-    seller: 'Lucía',
-    avatar: '/images/lucia.jpg',
-    createdAt: '2026-11-04T10:00:00-05:00',
-    owned: false,
-    sold: false,
-  },
-  {
-    id: 'silla-lectura',
-    title: 'Silla de lectura',
-    price: 120,
-    category: 'Hogar',
-    condition: 'Buen estado',
-    description:
-      'Silla en buen estado, firme y muy cómoda. Tiene poco uso y la tapicería está limpia. Recogida por San Cristóbal, a coordinar.',
-    image: '/images/chair.jpg',
-    neighborhood: 'San Cristóbal',
-    seller: 'Rosa',
-    avatar: '/images/lucia.jpg',
-    createdAt: '2026-11-03T10:00:00-05:00',
-    owned: false,
-    sold: false,
-  },
-]
-
-function isListing(value: unknown): value is Listing {
-  if (!value || typeof value !== 'object') return false
-  const item = value as Record<string, unknown>
-  return (
-    [
-      'id',
-      'title',
-      'category',
-      'condition',
-      'description',
-      'image',
-      'neighborhood',
-      'seller',
-      'avatar',
-      'createdAt',
-    ].every((key) => typeof item[key] === 'string') &&
-    typeof item.price === 'number' &&
-    Number.isFinite(item.price) &&
-    item.price >= 0 &&
-    item.owned === true &&
-    typeof item.sold === 'boolean' &&
-    typeof item.image === 'string' &&
-    /^data:image\/(jpeg|png|webp);base64,/.test(item.image)
-  )
+export type NewListing = Pick<Listing, 'title' | 'price' | 'category' | 'condition' | 'description'> & {
+  photo: File
+  requestId: string
 }
 
-function readListings(): Listing[] {
-  try {
-    const stored: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]')
-    return Array.isArray(stored) ? stored.filter(isListing) : []
-  } catch {
-    return []
-  }
+export type MarketView = 'all' | 'mine' | 'saved'
+export type MarketScope = 'nearby' | 'neighborhood'
+interface ListingFilters {
+  view: MarketView
+  scope?: MarketScope
+  q?: string
+}
+interface ListingPage {
+  items: Listing[]
+  nextCursor: string | null
+  total: number
 }
 
-function readFavorites(): string[] {
-  try {
-    const stored: unknown = JSON.parse(
-      localStorage.getItem(favoritesKey) ?? '[]',
-    )
-    return Array.isArray(stored)
-      ? stored.filter((id): id is string => typeof id === 'string')
-      : []
-  } catch {
-    return []
-  }
+export function fetchListings(filters: ListingFilters, signal: AbortSignal, cursor?: string) {
+  const params = new URLSearchParams({ view: filters.view })
+  if (filters.scope) params.set('scope', filters.scope)
+  if (filters.q) params.set('q', filters.q)
+  if (cursor) params.set('cursor', cursor)
+  return api<ListingPage>(`/listings?${params}`, { signal })
 }
 
-const listings = ref<Listing[]>([...readListings(), ...exampleListings])
-const favoriteIds = ref<string[]>(readFavorites())
-const recentIds = ref<string[]>([])
-const ownListings = computed(() =>
-  listings.value.filter((listing) => listing.owned),
-)
-const recentlyViewed = computed(() =>
-  recentIds.value.flatMap((id) => {
-    const listing = listings.value.find((item) => item.id === id && !item.sold)
-    return listing ? [listing] : []
-  }),
-)
+export function fetchListing(id: string, signal: AbortSignal) {
+  return api<Listing>(`/listings/${encodeURIComponent(id)}`, { signal })
+}
 
+export function addListing(listing: NewListing) {
+  const body = new FormData()
+  body.set('requestId', listing.requestId)
+  body.set('title', listing.title.trim())
+  body.set('price', listing.price.toFixed(2))
+  body.set('category', listing.category)
+  body.set('condition', listing.condition)
+  body.set('description', listing.description.trim())
+  body.set('photo', listing.photo)
+  return api<Listing>('/listings', { method: 'POST', body })
+}
+
+export function markSold(id: string) {
+  return api<Listing>(`/listings/${id}`, { method: 'PATCH', body: JSON.stringify({ sold: true }) })
+}
+
+export function removeListing(id: string) {
+  return api<void>(`/listings/${id}`, { method: 'DELETE' })
+}
+
+export async function setFavorite(id: string, saved: boolean) {
+  const result = await api<{ saved: boolean }>(`/listings/${id}/favorite`, {
+    method: 'PUT', body: JSON.stringify({ saved }),
+  })
+  return result.saved
+}
+
+const recentIds = shallowRef<string[]>([])
 watch(() => currentUser.value?.id, () => { recentIds.value = [] }, { flush: 'sync' })
 
-function rememberListing(id: string) {
+export function rememberListing(id: string) {
   recentIds.value = [id, ...recentIds.value.filter((value) => value !== id)].slice(0, 6)
 }
 
-function commitListings(next: Listing[]) {
-  localStorage.setItem(
-    storageKey,
-    JSON.stringify(next.filter((listing) => listing.owned)),
-  )
-  listings.value = next
-}
+export function useMarketplace(filters: Readonly<Ref<ListingFilters>>) {
+  const listings = shallowRef<Listing[]>([])
+  const total = shallowRef(0)
+  const nextCursor = shallowRef<string | null>(null)
+  const loading = shallowRef(true)
+  const error = shallowRef('')
+  const saving = shallowReactive(new Set<string>())
+  let controller: AbortController | undefined
+  let searchTimer: ReturnType<typeof setTimeout> | undefined
 
-function addListing(payload: NewListing) {
-  const listing: Listing = {
-    ...payload,
-    title: payload.title.trim(),
-    description: payload.description.trim(),
-    id: crypto.randomUUID(),
-    seller: currentUser.value?.name || 'Tú',
-    avatar: '',
-    createdAt: new Date().toISOString(),
-    owned: true,
-    sold: false,
+  const recentlyViewed = computed(() => recentIds.value.flatMap((id) => {
+    const listing = listings.value.find((item) => item.id === id)
+    return listing ? [listing] : []
+  }))
+
+  async function load(append = false) {
+    clearTimeout(searchTimer)
+    const cursor = append ? nextCursor.value : null
+    if (append && (loading.value || !cursor)) return
+    controller?.abort()
+    const request = new AbortController()
+    controller = request
+    loading.value = true
+    error.value = ''
+    try {
+      const page = await fetchListings(filters.value, request.signal, cursor ?? undefined)
+      if (request.signal.aborted) return
+      listings.value = append ? [...listings.value, ...page.items] : page.items
+      nextCursor.value = page.nextCursor
+      total.value = page.total
+    } catch (err) {
+      if (!request.signal.aborted) error.value = err instanceof Error ? err.message : 'No pudimos cargar los anuncios.'
+    } finally {
+      if (!request.signal.aborted) loading.value = false
+    }
   }
-  commitListings([listing, ...listings.value])
-  return listing
-}
 
-function markSold(id: string) {
-  commitListings(
-    listings.value.map((listing) =>
-      listing.id === id && listing.owned ? { ...listing, sold: true } : listing,
-    ),
+  watch(
+    [filters, () => currentUser.value?.id, () => currentUser.value?.ubigeo, () => currentUser.value?.neighborhood],
+    ([next, userId], [previous]) => {
+      controller?.abort()
+      clearTimeout(searchTimer)
+      listings.value = []
+      nextCursor.value = null
+      total.value = 0
+      loading.value = Boolean(userId)
+      error.value = ''
+      if (!userId) return
+      if (previous && previous.q !== next.q) {
+        searchTimer = setTimeout(() => void load(), 220)
+      } else {
+        void load()
+      }
+    },
+    { immediate: true },
   )
-}
 
-function toggleFavorite(id: string) {
-  const next = favoriteIds.value.includes(id)
-    ? favoriteIds.value.filter((value) => value !== id)
-    : [...favoriteIds.value, id]
-  localStorage.setItem(favoritesKey, JSON.stringify(next))
-  favoriteIds.value = next
-}
-
-function removeListing(id: string) {
-  commitListings(
-    listings.value.filter((listing) => listing.id !== id || !listing.owned),
-  )
-}
-
-export function useMarketplace() {
-  return {
-    listings,
-    ownListings,
-    favoriteIds,
-    recentlyViewed,
-    rememberListing,
-    addListing,
-    markSold,
-    removeListing,
-    toggleFavorite,
+  async function toggleFavorite(listing: Listing) {
+    if (saving.has(listing.id)) return
+    const userId = currentUser.value?.id
+    saving.add(listing.id)
+    try {
+      const saved = await setFavorite(listing.id, !listing.saved)
+      if (currentUser.value?.id !== userId) return
+      if (loading.value) {
+        await load()
+        return
+      }
+      if (filters.value.view === 'saved' && !saved && listings.value.some((item) => item.id === listing.id)) {
+        listings.value = listings.value.filter((item) => item.id !== listing.id)
+        total.value = Math.max(0, total.value - 1)
+      } else {
+        listings.value = listings.value.map((item) => item.id === listing.id ? { ...item, saved } : item)
+      }
+    } finally {
+      saving.delete(listing.id)
+    }
   }
+
+  onScopeDispose(() => {
+    clearTimeout(searchTimer)
+    controller?.abort()
+  })
+
+  return { listings, total, nextCursor, loading, error, saving, recentlyViewed, load, toggleFavorite }
 }
 
 export function formatPrice(price: number, { compact = false } = {}) {
