@@ -141,7 +141,7 @@ watch(()=>props.selected,id=>{const event=props.events.find(item=>item.id===id);
 function fitRange() {
   if (!map || props.pick) return
   const bounds = props.radius > 0
-    ? L.circle(props.center, { radius: props.radius }).getBounds()
+    ? L.latLng(props.center).toBounds(props.radius * 2)
     : L.latLngBounds([L.latLng(props.center), ...props.events.map(event => L.latLng(event.latitude, event.longitude))])
   map.fitBounds(bounds, { paddingTopLeft: [30, 115], paddingBottomRight: [30, 120], maxZoom: initialZoom, animate: !reducedMotion() })
 }
