@@ -2,6 +2,8 @@
 
 Base del proyecto de comunidad vecinal: Laravel 12, Vue 3, PostgreSQL y un microservicio privado Python con YuNet/SFace.
 
+**Para instalar en otra computadora o dar instrucciones a un agente:** [LEVANTAR-PROYECTO.md](LEVANTAR-PROYECTO.md). Incluye PostgreSQL/PostGIS portable, requisitos, arranque completo y solución de problemas.
+
 ## Estado actual
 
 - Registro de vecinos con DNI, contraseña, contacto, distrito, barrio y fotografía.
@@ -16,7 +18,7 @@ La API de registro `/api/v1` ya integra Scrall: consulta DNI, genera un ticket c
 
 La aplicación separada en `frontend/` tiene el registro conectado a `/api/v1`: consulta DNI, bloquea los datos obtenidos, carga selectores de ubicación en cascada, pide posición actual y completa la captura biométrica. Conserva el estilo del login de demostración. El login autentica por DNI y contraseña en Laravel. Las vistas requieren una sesión validada por el servidor; los contenidos de comunidad aún usan datos de demostración. La pantalla anterior en Laravel queda como referencia.
 
-El mapa, publicaciones, recomendaciones, intercambios, emergencias, modo offline y PostGIS quedan para las siguientes etapas. Los campos de coordenadas ya están preparados; PostgreSQL portable por ahora no incluye PostGIS.
+El entorno local incluye PostGIS y un mapa comunitario con eventos, inscripción, puntos por asistencia verificada y marcos desbloqueables. El feed admite publicaciones y recomendaciones por gustos. Ver [el contrato del mapa](docs/map-events.md) para sus reglas y limitaciones.
 
 ## Uso diario en Windows
 
@@ -46,7 +48,7 @@ La cámara funciona en `localhost` o `127.0.0.1`. Para abrir desde un teléfono 
 
 ## Instalación reproducible
 
-Requisitos: PHP 8.2+ y Composer, Node.js/npm, uv y Python 3.13 (uv puede descargarlo).
+Requisitos: PHP 8.3 y Composer, Node.js 22.12+ compatible con Vite/npm, uv y Python 3.13 (uv puede descargarlo).
 
 ```powershell
 .\scripts\setup-local.ps1
@@ -56,7 +58,7 @@ El script descarga los binarios de PostgreSQL de [EDB](https://www.enterprisedb.
 
 La primera instalación habilita `pdo_pgsql` y `pgsql` en el PHP activo de Laragon. Conserva el archivo anterior en `.local/php.ini.before-pgsql`. No cambia la base ni el código de `clubmejia`. Los pesos y recursos del navegador se incluyen localmente; no se descargan al iniciar el servicio.
 
-No regenerar `APP_KEY` después de guardar plantillas: esa clave permite descifrarlas. `setup-local.ps1` conserva una clave existente. `.env`, `.env.testing`, `modeloJose/.env`, el clúster y las contraseñas están excluidos de Git.
+No regenerar `APP_KEY` después de guardar plantillas: esa clave permite descifrarlas. `setup-local.ps1` conserva una clave existente. `.env`, `.env.testing`, `modeloBiometrico/.env`, el clúster y las contraseñas están excluidos de Git.
 
 Las migraciones se usan normalmente:
 
@@ -72,7 +74,7 @@ Para desarrollar la interfaz con recarga automática, mantener `npm run dev` en 
 ```powershell
 php artisan test
 npm run test:face
-.\modeloJose\.venv\Scripts\python.exe -m pytest modeloJose/tests -q
+.\modeloBiometrico\.venv\Scripts\python.exe -m pytest modeloBiometrico/tests -q
 npm run build
 ```
 
@@ -87,6 +89,6 @@ php artisan test --filter=LiveEnrollmentTest
 Remove-Item Env:\FACE_LIVE_TEST
 ```
 
-Esa imagen sirve para verificar el procesamiento técnico; no prueba cámara física, identidad ni liveness. El build verifica los hashes de los modelos de accesorios; `modeloJose/models/manifest.json` registra los hashes de YuNet/SFace.
+Esa imagen sirve para verificar el procesamiento técnico; no prueba cámara física, identidad ni liveness. El build verifica los hashes de los modelos de accesorios; `modeloBiometrico/models/manifest.json` registra los hashes de YuNet/SFace.
 
 Consultar [el contrato facial](docs/facial-api.md) y [la procedencia de los componentes](docs/reutilizacion.md).

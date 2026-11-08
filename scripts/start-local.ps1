@@ -2,6 +2,7 @@ param([switch]$Terminals)
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 & (Join-Path $PSScriptRoot 'pg.ps1') start
+& (Join-Path $PSScriptRoot 'setup-postgis.ps1')
 Push-Location $projectRoot
 try {
     & (Get-Command php).Source artisan demo:seed
@@ -11,12 +12,17 @@ New-Item -ItemType Directory -Force -Path (Join-Path $projectRoot '.local\logs')
 & (Get-Command node).Source (Join-Path $projectRoot 'frontend\scripts\sync-face-assets.mjs')
 if ($LASTEXITCODE -ne 0) { throw 'No se pudieron preparar los recursos faciales del frontend.' }
 foreach ($service in @(
-    @{ Name='face'; Port=8782; File=(Join-Path $projectRoot 'modeloJose\.venv\Scripts\python.exe'); Arguments=@('main.py','photo-check'); Directory=(Join-Path $projectRoot 'modeloJose') },
+    @{ Name='face'; Port=8782; File=(Join-Path $projectRoot 'modeloBiometrico\.venv\Scripts\python.exe'); Arguments=@('main.py','photo-check'); Directory=(Join-Path $projectRoot 'modeloBiometrico') },
     @{ Name='laravel'; Port=8000; File=(Get-Command php).Source; Arguments=@('-S','127.0.0.1:8000',(Join-Path $projectRoot 'vendor\laravel\framework\src\Illuminate\Foundation\resources\server.php')); Directory=(Join-Path $projectRoot 'public') }
     @{ Name='frontend'; Port=5173; File=(Get-Command node).Source; Arguments=@('node_modules/vite/bin/vite.js','--host=127.0.0.1','--port=5173','--strictPort'); Directory=(Join-Path $projectRoot 'frontend') }
+    @{ Name='scheduler'; Port=0; File=(Get-Command php).Source; Arguments=@('artisan','schedule:work'); Directory=$projectRoot }
 )) {
     $pidFile = Join-Path $projectRoot ".local\$($service.Name).pid"
-    if (Get-NetTCPConnection -LocalPort $service.Port -State Listen -ErrorAction SilentlyContinue) {
+    if ($service.Name -eq 'scheduler' -and (Test-Path -LiteralPath $pidFile)) {
+        $schedulerProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $([int][IO.File]::ReadAllText($pidFile))" -ErrorAction SilentlyContinue
+        if ($schedulerProcess -and $schedulerProcess.CommandLine -match 'artisan.*schedule:work') { continue }
+    }
+    if ($service.Port -gt 0 -and (Get-NetTCPConnection -LocalPort $service.Port -State Listen -ErrorAction SilentlyContinue)) {
         if (-not (Test-Path -LiteralPath $pidFile)) { throw "Puerto $($service.Port) ocupado por otro proceso." }
         $savedProcess = Get-Process -Id ([int][IO.File]::ReadAllText($pidFile)) -ErrorAction SilentlyContinue
         if (-not $savedProcess) { throw "El PID de $($service.Name) ya no existe, pero su puerto esta ocupado." }
@@ -41,6 +47,7 @@ Wait-Process -Id `$child.Id
         $process = Start-Process -FilePath $service.File -ArgumentList $service.Arguments -WorkingDirectory $service.Directory -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $projectRoot ".local\logs\$($service.Name).log") -RedirectStandardError (Join-Path $projectRoot ".local\logs\$($service.Name).err.log")
         [IO.File]::WriteAllText($pidFile, [string]$process.Id)
     }
+    if ($service.Name -eq 'scheduler') { continue }
     $ready = $false
     for ($attempt = 0; $attempt -lt 40; $attempt++) {
         $connection = [Net.Sockets.TcpClient]::new()

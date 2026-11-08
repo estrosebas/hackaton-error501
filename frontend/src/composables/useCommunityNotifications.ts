@@ -1,8 +1,9 @@
 import {
-  computed, inject, onMounted, onScopeDispose, provide, readonly, shallowRef,
+  computed, inject, onMounted, onScopeDispose, provide, readonly, shallowRef, watch,
   type InjectionKey,
 } from 'vue'
 import { api } from '../services/api'
+import { currentUser } from './useAuth'
 
 export interface NotificationPerson {
   id: number
@@ -142,6 +143,11 @@ function createNotifications({ onNewAlerts, onNewEmergencies }: NotificationCall
     void refresh()
     void refreshEmergencies()
   }
+  watch(() => currentUser.value?.ubigeo, () => {
+    syncing?.abort(); syncingEmergencies?.abort()
+    snapshot.value = undefined; emergencies.value = undefined
+    void refresh(true); void refreshEmergencies(true)
+  })
 
   onMounted(() => {
     onVisibility()

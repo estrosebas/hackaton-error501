@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CommunityPost;
 use App\Services\CommunityPhoto;
 use App\Services\NeighborConnections;
+use App\Services\PersonalizedFeed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -48,13 +49,16 @@ class CommunityController extends Controller
             'saved' => $post->getAttribute('my_bookmark') ?? DB::table('community_bookmarks')->where('post_id', $post->id)->where('user_id', $request->user()->id)->exists(),
             'comments_count' => $post->comments_count ?? $post->comments()->count(),
             'comments' => [], 'tags' => $post->tags->where('type', 'hashtag')->map(fn ($tag) => $tag->name)->values(),
-            'categories' => $post->tags->where('type', 'category')->map(fn ($tag) => $tag->name)->values(),
+            'categories' => $post->tags->toBase()->where('type', 'category')->map(fn ($tag) => $tag->name)->merge($post->tags->toBase()->where('type', 'feed_topic')->map(fn ($tag) => config('feed-interests.topics.'.$tag->name.'.label', $tag->name)))->unique()->values(),
+            'topics' => $post->tags->where('type', 'feed_topic')->map(fn ($tag) => $tag->name)->values(),
+            'recommended' => (int) $post->getAttribute('recommendation_priority') === 1,
+            'trending' => $post->created_at->gte(now()->subDays(config('feed-interests.recent_days'))) && (($post->getAttribute('reaction_total') ?? 0) + ($post->comments_count ?? 0)) >= 5,
         ];
     }
 
     public function index(Request $request)
     {
-        $data = $request->validate(['kind' => ['nullable', Rule::in(self::KINDS)], 'saved' => ['nullable', 'boolean'], 'cursor' => ['nullable', 'string', 'max:500']]);
+        $data = $request->validate(['kind' => ['nullable', Rule::in(self::KINDS)], 'saved' => ['nullable', 'boolean'], 'cursor' => ['nullable', 'string', 'max:2048']]);
         $viewer = $request->user();
         abort_unless($viewer->ubigeo, 422, 'Completa tu distrito para ver la comunidad.');
         $posts = CommunityPost::where('ubigeo', $viewer->ubigeo)
@@ -62,20 +66,21 @@ class CommunityController extends Controller
                 ->orWhereIn('user_id', $this->connections->visibleNeighbors($viewer)->select('id')))
             ->when($data['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
             ->when($request->boolean('saved'), fn ($q) => $q->whereIn('id', DB::table('community_bookmarks')->select('post_id')->where('user_id', $request->user()->id)))
-            ->with(['author:id,name,neighborhood,demo_key,demo_avatar', 'tags'])->withCount('comments')->orderByDesc('id')->cursorPaginate(10);
+            ->with(['author:id,name,neighborhood,demo_key,demo_avatar', 'tags'])->withCount('comments');
+        [$items, $nextCursor] = app(PersonalizedFeed::class)->paginate($posts, $viewer, $data['cursor'] ?? null, ! $request->filled('kind') && ! $request->boolean('saved'));
 
-        $ids = $posts->getCollection()->pluck('id');
+        $ids = $items->pluck('id');
         $counts = DB::table('community_reactions')->whereIn('post_id', $ids)->selectRaw('post_id, count(*) as total')->groupBy('post_id')->pluck('total', 'post_id');
         $mine = DB::table('community_reactions')->whereIn('post_id', $ids)->where('user_id', $request->user()->id)->pluck('post_id')->flip();
         $saved = DB::table('community_bookmarks')->whereIn('post_id', $ids)->where('user_id', $request->user()->id)->pluck('post_id')->flip();
 
-        return response()->json(['data' => $posts->getCollection()->map(function ($post) use ($request, $counts, $mine, $saved) {
+        return response()->json(['data' => $items->map(function ($post) use ($request, $counts, $mine, $saved) {
             $post->setAttribute('reaction_total', (int) ($counts[$post->id] ?? 0));
             $post->setAttribute('my_reaction', $mine->has($post->id));
             $post->setAttribute('my_bookmark', $saved->has($post->id));
 
             return $this->present($post, $request);
-        }), 'next_cursor' => $posts->nextCursor()?->encode()]);
+        }), 'next_cursor' => $nextCursor]);
     }
 
     public function show(Request $request, CommunityPost $post)
@@ -92,6 +97,8 @@ class CommunityController extends Controller
         $data = $request->validate([
             'body' => [Rule::requiredIf($request->input('kind') !== 'moment' || ! $hasPhotos), 'nullable', 'string', 'max:2000'],
             'kind' => ['required', Rule::in(self::KINDS)],
+            'topics' => ['nullable', 'array', 'list', 'max:3'],
+            'topics.*' => ['required', 'string', 'distinct', Rule::in(array_keys(config('feed-interests.topics')))],
             'photo' => ['nullable', 'prohibits:photos', ...self::IMAGE_RULES, 'max:2048'],
             'photos' => ['nullable', 'array', 'list', 'max:4'],
             'photos.*' => ['required', ...self::IMAGE_RULES, 'max:1536'],
@@ -128,6 +135,7 @@ class CommunityController extends Controller
                     'longitude' => $lng,
                 ]);
                 $post->syncTagsWithType($tags, 'hashtag');
+                $post->syncTagsWithType($data['topics'] ?? [], 'feed_topic');
 
                 return $post;
             });

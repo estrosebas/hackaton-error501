@@ -16,6 +16,20 @@ export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/recuperar-contrasena',
+      name: 'forgot-password',
+      component: () => import('./views/PasswordRecoveryView.vue'),
+      props: { mode: 'request' },
+      meta: { title: 'Recuperar cuenta' },
+    },
+    {
+      path: '/restablecer-contrasena',
+      name: 'reset-password',
+      component: () => import('./views/PasswordRecoveryView.vue'),
+      props: { mode: 'reset' },
+      meta: { title: 'Nueva contraseña' },
+    },
+    {
       path: '/iniciar-sesion',
       name: 'login',
       component: () => import('./views/AuthView.vue'),
@@ -44,8 +58,8 @@ export const router = createRouter({
         {
           path: 'vecinos',
           name: 'neighbors',
-          component: () => import('./views/NeighborsView.vue'),
-          meta: { title: 'Vecinos', section: 'neighbors' },
+          component: () => import('./views/MapEventsView.vue'),
+          meta: { title: 'Mapa comunitario', section: 'neighbors' },
         },
         {
           path: 'vecinos/:neighborId',
@@ -61,21 +75,27 @@ export const router = createRouter({
         },
         {
           path: 'publicar',
-          name: 'create',
+          name: 'feed-create',
           component: () => import('./views/PublishView.vue'),
-          meta: { title: 'Publicar', section: 'create' },
+          meta: { title: 'Publicar', section: 'home' },
+        },
+        {
+          path: 'mapa/crear',
+          name: 'create',
+          component: () => import('./views/CreateMapEventView.vue'),
+          meta: { title: 'Crear en el mapa', section: 'create' },
         },
         {
           path: 'publicar/actividad',
           name: 'create-activity',
           component: () => import('./views/PublishView.vue'),
-          meta: { title: 'Publicar actividad', section: 'create' },
+          meta: { title: 'Publicar actividad', section: 'home' },
         },
         {
           path: 'publicar/producto',
           name: 'create-product',
           component: () => import('./views/PublishView.vue'),
-          meta: { title: 'Publicar producto', section: 'create' },
+          meta: { title: 'Publicar producto', section: 'market' },
         },
         {
           path: 'mercadito',

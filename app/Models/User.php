@@ -63,6 +63,8 @@ class User extends Authenticatable implements HasMedia
             'dni_checked_at' => 'datetime',
             'location_captured_at' => 'datetime',
             'neighbor_profile' => 'array',
+            'feed_interests' => 'array',
+            'feed_interests_completed_at' => 'datetime',
             'share_community_presence' => 'boolean',
         ];
     }

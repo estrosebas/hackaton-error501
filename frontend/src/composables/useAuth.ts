@@ -17,6 +17,11 @@ export interface AuthUser {
   longitude?: number | string | null
   ubigeo?: string | null
   district?: string | null
+  region?: string | null
+  province?: string | null
+  phone?: string | null
+  feed_interests?: string[] | null
+  feed_interests_completed_at?: string | null
   neighbor_profile?: Partial<NeighborProfile> | null
 }
 export const currentUser = shallowRef<AuthUser | null>(null)
@@ -88,6 +93,23 @@ export async function updateNeighborProfile(changes: Partial<NeighborProfile>) {
   const user = { ...currentUser.value, neighbor_profile: data }
   currentUser.value = user
   saveSession(token, user)
+  return true
+}
+
+export async function refreshAccount() {
+  if (pending) await pending.request
+  return validateSession()
+}
+
+export async function updateFeedInterests(interests: string[]) {
+  const token = sessionStorage.getItem('masi.api.token')
+  const id = currentUser.value?.id
+  const { data } = await api<{data: Pick<AuthUser, 'feed_interests' | 'feed_interests_completed_at'>}>('/profile/interests', {method:'PUT',body:JSON.stringify({interests})})
+  if (pending?.token === token) await pending.request
+  if (!token || sessionStorage.getItem('masi.api.token') !== token || currentUser.value?.id !== id) return false
+  const user = {...currentUser.value!,...data}
+  currentUser.value = user
+  saveSession(token,user)
   return true
 }
 

@@ -9,11 +9,11 @@
 /.local/
 /tmp/
 /output/
-/modeloJose/.venv/
-/modeloJose/.env
-/modeloJose/**/__pycache__/
-/modeloJose/.pytest_cache/
-/modeloJose/data/
+/modeloBiometrico/.venv/
+/modeloBiometrico/.env
+/modeloBiometrico/**/__pycache__/
+/modeloBiometrico/.pytest_cache/
+/modeloBiometrico/data/
 /.playwright-cli/
 .env
 .env.backup

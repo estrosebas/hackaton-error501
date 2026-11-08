@@ -7,9 +7,11 @@ import AppSelect from '../AppSelect.vue'
 import PhotoPicker from '../PhotoPicker.vue'
 import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
 import ActivityFields from './ActivityFields.vue'
+import FeedTopicPicker from '../profile/FeedTopicPicker.vue'
 
 const props = defineProps<{ neighborhood: string; saving: boolean; error: string; activity?: boolean }>()
-const emit = defineEmits<{ publish: [text: string, kind: string, photos: Blob[], activity?: ActivityDetails] }>()
+const emit = defineEmits<{ publish: [text: string, kind: string, photos: Blob[], activity?: ActivityDetails, topics?: string[]] }>()
+const selectedTopics = shallowRef<string[]>([])
 const draft = shallowRef('')
 const kind = shallowRef<string | null>('moment')
 const options = postKinds.filter((item) => item.value !== 'activity')
@@ -130,9 +132,9 @@ function submit() {
       location: activityLocation.value.trim(),
       latitude: userLat,
       longitude: userLng,
-    })
+    }, selectedTopics.value)
   } else if (kind.value) {
-    emit('publish', draft.value.trim(), kind.value, attachments)
+    emit('publish', draft.value.trim(), kind.value, attachments, undefined, selectedTopics.value)
   }
 }
 </script>
@@ -163,6 +165,7 @@ function submit() {
         label="¿Qué quieres compartir?"
       />
     </NFormItem>
+    <section v-if="!emergency" aria-label="Temas de la publicación"><p style="color:var(--lavender);font-size:.875rem;font-weight:800">¿De qué trata? · Opcional</p><FeedTopicPicker v-model="selectedTopics" :max="3" compact :disabled="saving" /></section>
     <div class="compose-draft">
       <label :for="draftId">{{ activity ? 'Descripción de la actividad' : 'Tu publicación' }}</label>
       <NInput

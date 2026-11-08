@@ -9,6 +9,8 @@ import ProfileEditor from '../components/profile/ProfileEditor.vue'
 import ProfileIdentity from '../components/profile/ProfileIdentity.vue'
 import ProfilePage from '../components/profile/ProfilePage.vue'
 import ProfileShortcuts from '../components/profile/ProfileShortcuts.vue'
+import PrivateAccountCard from '../components/profile/PrivateAccountCard.vue'
+import FeedInterestsCard from '../components/profile/FeedInterestsCard.vue'
 import { currentUser, logout } from '../composables/useAuth'
 import { useCommunity } from '../composables/useCommunity'
 import { useMarketplace } from '../composables/useMarketplace'
@@ -44,6 +46,8 @@ async function signOut() {
 
     <template #presentation>
       <ProfileEditor />
+      <PrivateAccountCard />
+      <FeedInterestsCard />
     </template>
     <template #sidebar>
       <ProfileShortcuts

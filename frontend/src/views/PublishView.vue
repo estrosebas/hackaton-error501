@@ -14,7 +14,7 @@ const { neighborhood, addPost } = useCommunity()
 const { addListing } = useMarketplace()
 const saving = shallowRef(false)
 const error = shallowRef('')
-const tabs = ['create', 'create-activity', 'create-product']
+const tabs = ['feed-create', 'create-activity', 'create-product']
 const kind = computed(() => String(route.name))
 
 function changeKind(value: string) {
@@ -23,12 +23,12 @@ function changeKind(value: string) {
   router.replace({ name: value })
 }
 
-async function publishPost(text: string, type: string, photos: Blob[], activity?: ActivityDetails) {
+async function publishPost(text: string, type: string, photos: Blob[], activity?: ActivityDetails, topics: string[] = []) {
   if (saving.value) return
   saving.value = true
   error.value = ''
   try {
-    await addPost(text, type, photos, activity)
+    await addPost(text, type, photos, activity, topics)
     message.success(activity ? 'Tu actividad ya está en Inicio' : 'Tu publicación ya está en la comunidad')
     await router.push({ name: 'home' })
   } catch (e) {
@@ -67,7 +67,7 @@ async function publishProduct(listing: NewListing) {
       </div>
     </div>
     <NTabs :value="kind" type="segment" animated @update:value="changeKind"
-      ><NTabPane name="create" tab="Al barrio"
+      ><NTabPane name="feed-create" tab="Al barrio"
         ><PostComposer
           :neighborhood="neighborhood"
           :saving="saving"

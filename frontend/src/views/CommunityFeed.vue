@@ -22,7 +22,7 @@ const emit = defineEmits<{
         :neighborhood="neighborhood"
         @change-neighborhood="emit('openPanel', 'neighborhood')"
       >
-        <RouterLink class="local-action local-action--quiet" :to="{ name: 'create' }">
+        <RouterLink class="local-action local-action--quiet" :to="{ name: 'feed-create' }">
           <AppIcon name="plus" :size="17" /> Publicar
         </RouterLink>
       </LocalPageHeading>

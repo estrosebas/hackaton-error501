@@ -1,5 +1,7 @@
 # Servicios de registro y perfil
 
+Recuperación por correo y configuración del relay SMTP: [recuperación de contraseña](password-recovery.md).
+
 Perfiles públicos, likes de comentarios, scroll y salas privadas: [contrato de conversaciones](neighbor-conversations.md).
 
 Base local: `http://127.0.0.1:8000/api/v1`. Enviar `Accept: application/json`. El frontend separado en `frontend/` conecta su registro a estos endpoints mediante el proxy Vite de `/api`. El login usa DNI y contraseña registrados, valida la sesión con el servidor y protege las vistas. El muro y las actividades se conectan a la API. El directorio de vecinos usa perfiles de ejemplo.
@@ -93,6 +95,20 @@ El servidor conserva esta selección y la devuelve al titular en `GET /profile`.
 `PATCH /profile/presentation` recibe los campos que cambian dentro de `neighbor_profile` y devuelve el perfil actualizado en `data`. Para borrar una selección envía `[]` en `skills` o `interests`, `null` en `bio` o `availability`, o `false` en `can_help`. Los campos omitidos conservan su valor.
 
 ## Feed comunitario
+
+El mapa tiene eventos y puntos de empatía propios, separados del feed. Ver rutas, categorías, inscripción y validación espacial en [map-events.md](map-events.md).
+
+### Datos privados y gustos
+
+`GET /profile/private` devuelve únicamente al titular su DNI, nombre validado, fecha de nacimiento, correo, teléfono, UBIGEO, región, provincia, distrito y barrio; usa `Cache-Control: no-store`. Estos datos no se añaden al perfil público de vecinos.
+
+`PATCH /profile/private` recibe `email`, `phone` opcional, `ubigeo` y `neighborhood`. Cambiar el correo exige `current_password` e invalida los enlaces anteriores de recuperación. DNI, nombre y nacimiento permanecen bloqueados. Región, provincia y distrito se derivan del catálogo UBIGEO del servidor.
+
+`GET /feed/topics` ofrece el catálogo público de temas (`id`, `label`, `emoji`). `PUT /profile/interests` guarda `interests`, una lista de hasta ocho identificadores distintos del catálogo. Una lista vacía permite omitir el paso. Ambos casos registran que la bienvenida fue completada; los gustos se pueden cambiar desde Mi perfil y no se muestran a otros vecinos.
+
+Al publicar se puede enviar `topics` con hasta tres identificadores del catálogo, también en multipart mediante `topics[]`. El feed general prioriza emergencias recientes, después coincidencias de los últimos 14 días con los gustos (temas, categorías, hashtags o palabras del texto), y conserva el resto de publicaciones. Mantiene el ámbito del distrito registrado; no calcula distancia GPS. Los filtros de tipo y guardados conservan orden cronológico.
+
+`recommended` identifica coincidencias y `trending` señala publicaciones recientes con al menos cinco reacciones y comentarios combinados. Esta tendencia es interna al feed. La paginación personalizada usa cursores cifrados asociados al usuario, distrito y gustos, y fija el conjunto de publicaciones al iniciar para evitar duplicados cuando llegan publicaciones nuevas. Cambiar gustos o distrito requiere recargar desde la primera página.
 
 Todas las rutas requieren Sanctum y operan únicamente dentro del UBIGEO del usuario autenticado:
 

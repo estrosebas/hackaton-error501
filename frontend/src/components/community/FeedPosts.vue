@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import AppIcon from '../AppIcon.vue'
 import AppSelect from '../AppSelect.vue'
+import { currentUser } from '../../composables/useAuth'
 import NeighborPost from './NeighborPost.vue'
 import ActivityRail from './ActivityRail.vue'
 import {
@@ -113,7 +114,7 @@ function deletePost(id: string) {
       <div class="feed-heading-icon"><AppIcon name="chat" :size="20" /></div>
       <div>
         <h2 id="feed-posts-title">Ayuda y comunidad</h2>
-        <p>Publicaciones de tu distrito</p>
+        <p>{{currentUser?.feed_interests?.length ? 'Para ti · Gustos y publicaciones recientes de tu distrito' : 'Publicaciones de tu distrito'}}</p>
       </div>
     </header>
     <div class="feed-filters">

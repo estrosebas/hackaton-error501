@@ -54,14 +54,15 @@ $testSettings = $localSettings.Replace('APP_ENV=local', 'APP_ENV=testing').Repla
 $testSettings = [regex]::Replace($testSettings, '(?m)^SCRALL_BASIC_TOKEN=.*$', 'SCRALL_BASIC_TOKEN=')
 [IO.File]::WriteAllText((Join-Path $projectRoot '.env.testing'), $testSettings)
 $tokenLine = ($localSettings -split "`r?`n" | Where-Object { $_.StartsWith('FACE_PHOTO_CHECK_TOKEN=') })
-[IO.File]::WriteAllText((Join-Path $projectRoot 'modeloJose\.env'), "$tokenLine`nFACE_PHOTO_CHECK_PORT=8782`nFACE_CPU_THREADS=2`n")
+[IO.File]::WriteAllText((Join-Path $projectRoot 'modeloBiometrico\.env'), "$tokenLine`nFACE_PHOTO_CHECK_PORT=8782`nFACE_CPU_THREADS=2`n")
 & (Join-Path $PSScriptRoot 'pg.ps1') init
+& (Join-Path $PSScriptRoot 'setup-postgis.ps1')
 & php artisan migrate --force
 if ($LASTEXITCODE -ne 0) { throw 'Migraciones fallidas.' }
 & php artisan db:seed --force
 if ($LASTEXITCODE -ne 0) { throw 'Catalogos y permisos fallidos.' }
-if (-not (Test-Path -LiteralPath 'modeloJose\.venv\Scripts\python.exe')) { & uv venv --python 3.13 modeloJose/.venv }
-& uv pip install --python modeloJose/.venv/Scripts/python.exe -r modeloJose/requirements-dev.txt
+if (-not (Test-Path -LiteralPath 'modeloBiometrico\.venv\Scripts\python.exe')) { & uv venv --python 3.13 modeloBiometrico/.venv }
+& uv pip install --python modeloBiometrico/.venv/Scripts/python.exe -r modeloBiometrico/requirements-dev.txt
 if ($LASTEXITCODE -ne 0) { throw 'Dependencias Python fallidas.' }
 & npm install --no-audit --no-fund
 if ($LASTEXITCODE -ne 0) { throw 'Dependencias frontend fallidas.' }

@@ -5,6 +5,7 @@ import {
   shallowRef,
   type InjectionKey,
   onMounted,
+  watch,
 } from 'vue'
 import { api } from '../services/api'
 import { currentUser } from './useAuth'
@@ -28,6 +29,9 @@ export interface Post {
   owned: boolean
   tags: string[]
   categories?: string[]
+  topics?: string[]
+  recommended?: boolean
+  trending?: boolean
   comments_count: number
   author: string
   avatar: string
@@ -232,10 +236,12 @@ function createCommunity() {
     type: string,
     photos: Blob[],
     activity?: ActivityDetails,
+    topics: string[] = [],
   ) {
     const fields = {
       body: text,
       kind: type,
+      topics,
       ...(activity && {
         activity_title: activity.title,
         activity_starts_at: activity.starts_at,
@@ -248,7 +254,8 @@ function createCommunity() {
     if (photos.length) {
       const form = new FormData()
       for (const [key, value] of Object.entries(fields)) {
-        if (value != null) form.set(key, String(value))
+        if (key === 'topics') { for (const topic of topics) form.append('topics[]', topic) }
+        else if (value != null) form.set(key, String(value))
       }
       for (const photo of photos) {
         form.append(
@@ -303,6 +310,13 @@ function createCommunity() {
     void loadPosts()
     void loadActivities()
   })
+  watch([() => currentUser.value?.ubigeo, () => JSON.stringify(currentUser.value?.feed_interests ?? [])], (_next, previous) => {
+    neighborhood.value = currentUser.value?.neighborhood || 'Tu comunidad'
+    posts.value = []; nextCursor.value = null
+    void loadPosts()
+    if (_next[0] !== previous[0]) void loadActivities()
+  })
+  watch(() => currentUser.value?.neighborhood, value => { neighborhood.value = value || 'Tu comunidad' })
   return {
     neighborhood,
     posts,

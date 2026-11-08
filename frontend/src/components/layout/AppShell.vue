@@ -10,6 +10,8 @@ import CommunityPanels, { type Panel } from '../community/CommunityPanels.vue'
 import { provideCommunity } from '../../composables/useCommunity'
 import { provideCommunityNotifications } from '../../composables/useCommunityNotifications'
 import { provideProfileAvatar } from '../../composables/useProfileAvatar'
+import FeedInterestsDialog from '../profile/FeedInterestsDialog.vue'
+import { currentUser } from '../../composables/useAuth'
 
 const { neighborhood, activities } = provideCommunity()
 provideProfileAvatar()
@@ -17,6 +19,8 @@ const route = useRoute()
 const router = useRouter()
 const tabDirection = shallowRef<'forward' | 'back'>()
 const panel = shallowRef<Panel | null>(null)
+const interestsOpen = shallowRef(false)
+watch(() => currentUser.value?.id, id => { interestsOpen.value = !!id && !currentUser.value?.feed_interests_completed_at }, {immediate:true})
 const message = useMessage()
 const { unread, unreadEmergencies } = provideCommunityNotifications({
   onNewAlerts: (count) => {
@@ -103,6 +107,7 @@ watch(
       </RouterView>
     </main>
     <BottomNavigation :active="activeNav" />
+    <FeedInterestsDialog v-model:show="interestsOpen" />
     <CommunityPanels
       v-model:panel="panel"
       :neighborhood="neighborhood"

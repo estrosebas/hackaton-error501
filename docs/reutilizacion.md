@@ -19,10 +19,10 @@ Origen local: `C:\laragonzo\www\clubmejia`, inspeccionado para esta adaptación.
 
 ## Python
 
-- Pesos YuNet/SFace originales de `modeloJose/models/sface_yunet` y clases de detección/calidad.
+- Pesos YuNet/SFace y clases de detección/calidad reutilizados del proyecto de origen; copia local en `modeloBiometrico/models/sface_yunet`.
 - Solo se conserva la función `extract_enrollment_embedding` de enrollment; se retiran importaciones y operaciones de galería, padrón y equipos Hikvision.
 - `photo_check_service.py` conserva límites, autenticación, concurrencia y comprobación de calidad. Se adapta la configuración y se añade `/extract` privado para guardar la plantilla en PostgreSQL mediante Laravel.
-- La huella de modelo depende de ambos pesos y de la versión de OpenCV. Los hashes de los archivos copiados están en `modeloJose/models/manifest.json`.
+- La huella de modelo depende de ambos pesos y de la versión de OpenCV. Los hashes de los archivos copiados están en `modeloBiometrico/models/manifest.json`.
 
 ## Laravel
 

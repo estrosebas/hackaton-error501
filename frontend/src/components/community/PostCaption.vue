@@ -11,6 +11,8 @@ const kind = computed(() => postKinds.find(item => item.value === props.post.kin
 <template>
   <div class="post-caption">
     <div v-if="kind || post.status === 'resolved'" class="post-labels">
+      <span v-if="post.recommended" class="post-kind">♡ Para ti</span>
+      <span v-if="post.trending" class="post-kind">↗ En tendencia en tu distrito</span>
       <span v-if="kind" class="post-kind">{{ kind }}</span>
       <span v-if="post.status === 'resolved'" class="post-resolved">
         <AppIcon name="check" :size="14" />

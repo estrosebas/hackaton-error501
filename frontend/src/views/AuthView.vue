@@ -132,6 +132,7 @@ async function signIn(credentials: { dni: string; password: string }) {
         @submit="signIn"
       />
       <p v-if="sessionError" class="session-error" role="alert">{{ sessionError }}</p>
+      <RouterLink v-if="mode === 'login'" :to="{ name: 'forgot-password' }" class="password-recovery-link">¿Olvidaste tu contraseña?</RouterLink>
       <p class="auth-switch">
         {{
           mode === 'login'
@@ -157,6 +158,7 @@ async function signIn(credentials: { dni: string; password: string }) {
 </template>
 
 <style scoped>
+.password-recovery-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--coral); font-size: 13px; font-weight: 800; }
 .session-error { color: #ffb0c0; font-size: 13px; line-height: 1.5; }
 .auth-page {
   --auth-gutter: clamp(14px, 5vw, 24px);
