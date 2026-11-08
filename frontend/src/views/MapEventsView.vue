@@ -11,6 +11,7 @@ import {useMapEvents,currentPosition,type MapEvent} from '../composables/useMapE
 import {Capacitor} from '@capacitor/core'
 import {backgroundTracking,backgroundError,backgroundPosition,startBackgroundLocation,stopBackgroundLocation} from '../native/backgroundLocation'
 import {currentUser} from '../composables/useAuth'
+import {hasSeenTour,startMapTour,stopMasiTour,tourRunning} from '../composables/useMasiTour'
 const {events,catalog,error,loading,hasMore,load,action}=useMapEvents()
 const category=ref(''),selected=ref<number>(),busy=ref(false),actionError=ref(''),notice=ref(''),tracking=ref(false)
 const search=ref(''),radius=ref(300),mode=ref<'map'|'list'>('map'),detailsOpen=ref(false),rewardsOpen=ref(false)
@@ -67,6 +68,18 @@ function formatDistance(event?:{latitude:number;longitude:number}|null):string{
 }
 const router = useRouter()
 const route = useRoute()
+async function showMapGuide() {
+  if (!catalog.value.categories.length || tourRunning.value) return
+  mode.value = 'map'
+  filtersOpen.value = false
+  detailsOpen.value = false
+  rewardsOpen.value = false
+  await startMapTour(router, catalog.value.categories)
+}
+watch([()=>catalog.value.categories.length,()=>currentUser.value?.id,tourRunning],()=>{
+  const id = currentUser.value?.id
+  if(id && hasSeenTour(id) && !hasSeenTour(id,'map') && !tourRunning.value && !route.query.event)void showMapGuide()
+},{flush:'post'})
 watch([()=>route.query.event,events],()=>{
   const event=events.value.find(item=>item.id===Number(route.query.event))
   if(event){center.value={lat:event.latitude,lng:event.longitude};selected.value=event.id;detailsOpen.value=true;actionError.value=''}
@@ -125,12 +138,12 @@ async function locate(manual?:MapEvent){
 let timer:ReturnType<typeof setInterval>|undefined
 onMounted(()=>{void load();timer=setInterval(()=>{if(tracking.value)void locate()},45000)})
 watch(()=>currentUser.value?.ubigeo,()=>{selected.value=undefined;tracking.value=false;void load()})
-onBeforeUnmount(()=>clearInterval(timer))
+onBeforeUnmount(()=>{clearInterval(timer);stopMasiTour()})
 </script>
 <template>
   <section class="nearby-page community-events-explorer" :class="{ 'community-events-explorer--map': mode === 'map' }">
     <!-- MODO MAPA: Experiencia Inmersiva de Pantalla Completa con Controles Flotantes Glassmorphism -->
-    <div v-if="mode === 'map'" class="neighbor-map-stage neighbor-map-stage--full">
+    <div v-if="mode === 'map'" class="neighbor-map-stage neighbor-map-stage--full" data-tour="map-canvas">
       <CommunityEventMap
         fill
         :center="center"
@@ -155,6 +168,7 @@ onBeforeUnmount(()=>clearInterval(timer))
             </button>
           </div>
           <div class="map-floating-view-switch" role="group" aria-label="Vista de eventos">
+            <button type="button" aria-label="Guía del mapa" title="Guía del mapa" :disabled="!catalog.categories.length || tourRunning" @click="showMapGuide">?</button>
             <button
               type="button"
               :class="{ active: mode === 'map' }"
@@ -196,7 +210,7 @@ onBeforeUnmount(()=>clearInterval(timer))
           </div>
 
           <!-- Selector de Radio Nativo (Sin truncamiento) -->
-          <div class="map-radius-container">
+          <div class="map-radius-container" data-tour="map-radius">
             <select
               v-model.number="radius"
               class="map-radius-native-select"
@@ -213,6 +227,7 @@ onBeforeUnmount(()=>clearInterval(timer))
           <button
             type="button"
             class="map-filter-toggle-btn"
+            data-tour="map-categories"
             :class="{ active: filtersOpen || category }"
             aria-label="Filtrar por categorías"
             @click="filtersOpen = !filtersOpen"
@@ -389,6 +404,7 @@ onBeforeUnmount(()=>clearInterval(timer))
             </button>
           </div>
           <div class="neighbor-view-switch" role="group" aria-label="Vista de eventos">
+            <button type="button" aria-label="Guía del mapa" :disabled="!catalog.categories.length || tourRunning" @click="showMapGuide">?</button>
             <button type="button" aria-label="Ver mapa" @click="mode = 'map'">
               <AppIcon name="map" :size="19" />
             </button>
