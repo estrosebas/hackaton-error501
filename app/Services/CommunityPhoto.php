@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 final class CommunityPhoto
 {
-    public function store(UploadedFile $photo): string
+    public function store(UploadedFile $photo, bool $avatar = false): string
     {
         // Re-encode shared photos so EXIF metadata (including GPS) is never served.
         $image = @imagecreatefromstring($photo->getContent());
@@ -36,6 +36,12 @@ final class CommunityPhoto
         }
         imagepalettetotruecolor($image);
         imagesavealpha($image, true);
+        if ($avatar) {
+            $scale = min(1, 160 / max(imagesx($image), imagesy($image)));
+            $image = imagescale($image, max(1, (int) round(imagesx($image) * $scale)), max(1, (int) round(imagesy($image) * $scale)));
+            abort_unless($image, 500, 'No pudimos reducir la foto.');
+            imagesavealpha($image, true);
+        }
 
         ob_start();
         try {
@@ -46,7 +52,8 @@ final class CommunityPhoto
         }
         abort_unless($encoded && $contents, 500, 'No pudimos preparar la foto.');
 
-        $path = 'community-photos/'.Str::uuid().'.webp';
+        $directory = $avatar ? 'community-avatars' : 'community-photos';
+        $path = $directory.'/'.Str::uuid().'.webp';
         abort_unless(Storage::disk('local')->put($path, $contents), 500, 'No pudimos guardar la foto.');
 
         return $path;

@@ -37,7 +37,7 @@ const emit = defineEmits<{
             circle
             quaternary
             class="icon-button"
-            aria-label="Notificaciones"
+            :aria-label="unread ? `Notificaciones (${unread} sin leer)` : 'Notificaciones'"
             @click="emit('open', 'notifications')"
             ><AppIcon name="bell" :size="22"
           /></NButton>

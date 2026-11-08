@@ -1,24 +1,25 @@
 <script setup lang="ts">
 import { computed, shallowRef, watch } from 'vue'
-import { RouterView, useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router'
+import { RouterView, useRoute, useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import CommunityHeader from '../community/CommunityHeader.vue'
 import BottomNavigation from '../community/BottomNavigation.vue'
+import { navigationItems } from '../community/navigation'
 import CommunityPanels, { type Panel } from '../community/CommunityPanels.vue'
 import { provideCommunity } from '../../composables/useCommunity'
+import { provideCommunityNotifications } from '../../composables/useCommunityNotifications'
 import { provideProfileAvatar } from '../../composables/useProfileAvatar'
 
 const { neighborhood, activities } = provideCommunity()
 provideProfileAvatar()
 const route = useRoute()
 const router = useRouter()
-const animatedTabs = new Set<RouteLocationNormalizedLoaded['name']>([
-  'home',
-  'neighbors',
-  'market',
-  'more',
-])
+const tabDirection = shallowRef<'forward' | 'back'>()
 const panel = shallowRef<Panel | null>(null)
-const unread = shallowRef(3)
+const message = useMessage()
+const { unread } = provideCommunityNotifications((count) => {
+  message.warning(count === 1 ? 'Nueva alerta vecinal en tu distrito' : `${count} alertas vecinales nuevas en tu distrito`)
+})
 const selectedActivityId = shallowRef<string>()
 const selectedActivity = computed(() =>
   activities.value.find((activity) => activity.id === selectedActivityId.value),
@@ -37,7 +38,6 @@ const compactHeader = computed(
 function openPanel(value: Panel) {
   if (value === 'messages') { void router.push('/mensajes'); return }
   panel.value = value
-  if (value === 'notifications') unread.value = 0
 }
 
 function selectActivity(id: string) {
@@ -48,6 +48,14 @@ function selectActivity(id: string) {
 function removePreviousView(_element: Element, done: () => void) {
   done()
 }
+
+watch(() => route.name, (to, from) => {
+  const nextIndex = navigationItems.findIndex((item) => item.key === to)
+  const previousIndex = navigationItems.findIndex((item) => item.key === from)
+  tabDirection.value = nextIndex < 0 || previousIndex < 0
+    ? undefined
+    : nextIndex > previousIndex ? 'forward' : 'back'
+}, { flush: 'sync' })
 
 watch(
   () => route.fullPath,
@@ -73,13 +81,9 @@ watch(
       :compact="compactHeader"
       @open="openPanel"
     />
-    <main id="page-content" class="community-content" tabindex="-1">
-      <RouterView v-slot="{ Component, route: viewRoute }">
-        <Transition
-          name="community-tab"
-          :css="animatedTabs.has(viewRoute.name)"
-          @leave="removePreviousView"
-        >
+    <main id="page-content" class="community-content" :data-tab-direction="tabDirection" tabindex="-1">
+      <RouterView v-slot="{ Component }">
+        <Transition name="community-page" @leave="removePreviousView">
           <component
             :is="Component"
             @open-panel="openPanel"
@@ -154,18 +158,36 @@ watch(
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .community-tab-enter-active {
-    animation: community-tab-in 240ms cubic-bezier(0.22, 0.7, 0.25, 1);
+  .community-page-enter-active {
+    animation: community-page-fade 150ms ease-out;
+  }
+
+  .community-content[data-tab-direction]:has(> .community-page-enter-active) {
+    overflow-x: clip;
+  }
+
+  .community-content[data-tab-direction] > .community-page-enter-active {
+    --tab-entry-x: 12px;
+    animation: community-tab-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .community-content[data-tab-direction='back'] > .community-page-enter-active {
+    --tab-entry-x: -12px;
+  }
+
+  @keyframes community-page-fade {
+    from { opacity: 0.88; }
+    to { opacity: 1; }
   }
 
   @keyframes community-tab-in {
     from {
-      opacity: 0.65;
-      transform: translateY(6px);
+      opacity: 0.82;
+      translate: var(--tab-entry-x) 0;
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      translate: 0 0;
     }
   }
 }

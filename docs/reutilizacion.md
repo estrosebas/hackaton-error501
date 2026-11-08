@@ -4,7 +4,7 @@
 
 Se inspeccionaron `FEED-SOCIAL.md`, el controlador y los modelos del feed en `C:\laragonzo\www\clubmejia-mesas`. Se adaptaron sus patrones de paginación por cursor, comentarios, reacciones y guardados; la implementación usa el diseño Vue/Naive UI de masi y tablas propias en PostgreSQL. No se copiaron datos, fotos, credenciales ni permisos del club.
 
-La primera versión admite texto con hasta cinco hashtags y seis categorías: pedidos de ayuda, ofrecimientos, colaboraciones, iniciativas, actividades y alertas. El distrito registrado delimita la comunidad; la autoría y el distrito siempre se obtienen de la sesión. El propietario puede marcar una publicación como atendida, reabrirla o retirarla. Las fotos y el editor enriquecido del origen quedan fuera de esta versión. El carrusel de actividades y las notificaciones existentes siguen siendo demostrativos.
+La primera versión admite texto con hasta cinco hashtags y seis categorías: pedidos de ayuda, ofrecimientos, colaboraciones, iniciativas, actividades y alertas. El distrito registrado delimita la comunidad. La autoría y el distrito se obtienen de la sesión. El propietario puede marcar una publicación como atendida, reabrirla o retirarla. Las fotos y el editor enriquecido del origen quedaron fuera de esa adaptación. La campana usa las publicaciones reales de actividad, pedido de ayuda y alerta del distrito, y muestra la presencia de quienes la comparten.
 
 Origen local: `C:\laragonzo\www\clubmejia`, inspeccionado para esta adaptación. El proyecto de origen se mantuvo sin cambios.
 

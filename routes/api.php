@@ -4,7 +4,9 @@ use App\Http\Controllers\ApiSessionController;
 use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommentReactionController;
+use App\Http\Controllers\CommunityAvatarController;
 use App\Http\Controllers\CommunityController;
+use App\Http\Controllers\CommunityNotificationController;
 use App\Http\Controllers\DemoAvatarController;
 use App\Http\Controllers\FacePhotoController;
 use App\Http\Controllers\MediaController;
@@ -32,6 +34,7 @@ Route::prefix('v1')->group(function () {
         Route::get('neighbors', [NeighborController::class, 'index']);
         Route::get('neighbors/blocked', [NeighborController::class, 'blocks']);
         Route::get('neighbors/{neighbor}', [NeighborController::class, 'show']);
+        Route::get('neighbors/{neighbor}/community-avatar', [CommunityAvatarController::class, 'show']);
         Route::put('neighbors/{neighbor}/block', [NeighborController::class, 'block'])->middleware('throttle:30,1');
         Route::get('rooms', [ChatController::class, 'index']);
         Route::post('rooms/direct/{neighbor}', [ChatController::class, 'direct'])->middleware('throttle:20,1');
@@ -44,6 +47,7 @@ Route::prefix('v1')->group(function () {
         Route::put('rooms/{room}/read', [ChatController::class, 'read']);
         Route::get('feed', [CommunityController::class, 'index']);
         Route::post('feed', [CommunityController::class, 'store'])->middleware(['can:posts.create', 'throttle:6,1']);
+        Route::get('feed/{post}', [CommunityController::class, 'show'])->whereNumber('post');
         Route::get('feed/{post}/photo/{index?}', [CommunityController::class, 'photo'])->whereNumber('index');
         Route::get('feed/{post}/comments', [CommunityController::class, 'comments']);
         Route::put('feed/{post}/comments/{comment}/reaction', CommentReactionController::class)->whereNumber('comment')->middleware('throttle:60,1');
@@ -52,6 +56,11 @@ Route::prefix('v1')->group(function () {
         Route::put('feed/{post}/bookmark', [CommunityController::class, 'bookmark'])->middleware('throttle:60,1');
         Route::patch('feed/{post}', [CommunityController::class, 'state']);
         Route::delete('feed/{post}', [CommunityController::class, 'destroy']);
+        Route::post('notifications/sync', [CommunityNotificationController::class, 'sync'])->middleware('throttle:30,1');
+        Route::put('notifications/presence', [CommunityNotificationController::class, 'presence'])->middleware('throttle:15,1');
+        Route::put('notifications/{post}/read', [CommunityNotificationController::class, 'read'])->whereNumber('post')->middleware('throttle:60,1');
+        Route::post('profile/community-avatar', [CommunityAvatarController::class, 'update'])->middleware(['can:profile.update', 'throttle:6,1']);
+        Route::delete('profile/community-avatar', [CommunityAvatarController::class, 'destroy'])->middleware('can:profile.update');
         Route::get('profile/avatar', [AvatarController::class, 'show']);
         Route::post('profile/avatar', [AvatarController::class, 'update'])->middleware(['can:profile.update', 'throttle:6,1']);
         Route::get('profile', [ProfileController::class, 'show']);

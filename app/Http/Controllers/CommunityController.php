@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CommunityPost;
 use App\Services\CommunityPhoto;
+use App\Services\NeighborConnections;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -66,6 +67,14 @@ class CommunityController extends Controller
 
             return $this->present($post, $request);
         }), 'next_cursor' => $posts->nextCursor()?->encode()]);
+    }
+
+    public function show(Request $request, CommunityPost $post, NeighborConnections $connections)
+    {
+        $this->scope($request, $post);
+        abort_if($connections->blocked($request->user()->id, $post->user_id), 404);
+
+        return response()->json(['data' => $this->present($post->load(['author', 'tags']), $request)]);
     }
 
     public function store(Request $request, CommunityPhoto $photos)
