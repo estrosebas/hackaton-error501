@@ -57,12 +57,10 @@ defineExpose({ focus: () => input.value?.focus() })
           </NAvatar>
         </NeighborLink>
         <div class="comment-text">
-          <p>
-            <NeighborLink :id="comment.author_id" :name="comment.author"
-              ><strong>{{ comment.author }}</strong></NeighborLink
-            >
-            {{ comment.text }}
-          </p>
+          <NeighborLink :id="comment.author_id" :name="comment.author"
+            ><strong>{{ comment.author }}</strong></NeighborLink
+          >
+          <p>{{ comment.text }}</p>
           <NeighborEndorsement :neighbor-id="comment.author_id" :name="comment.author" compact/>
           <div class="comment-meta">
             <span>{{ comment.time }}</span
@@ -152,6 +150,8 @@ defineExpose({ focus: () => input.value?.focus() })
   flex-shrink: 0;
 }
 .comment-text {
+  display: grid;
+  gap: 4px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -159,6 +159,7 @@ defineExpose({ focus: () => input.value?.focus() })
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.45;
+  white-space: pre-wrap;
 }
 .comment-text strong {
   margin-inline-end: 3px;
