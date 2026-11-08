@@ -7,7 +7,7 @@ import CommunityNotificationAvatar from './CommunityNotificationAvatar.vue'
 import CommunityNotificationDetail from './CommunityNotificationDetail.vue'
 import CommunityNotificationSettings from './CommunityNotificationSettings.vue'
 
-const { snapshot, failed, unread, refresh } = useCommunityNotifications()
+const { snapshot, failed, emergenciesFailed, emergenciesReady, notices, unread, refresh, refreshEmergencies } = useCommunityNotifications()
 defineEmits<{ close: [] }>()
 const selected = shallowRef<CommunityNotification>()
 const settingsOpen = shallowRef(false)
@@ -17,6 +17,7 @@ const types: Record<CommunityNotification['kind'], { label: string; icon: IconNa
   activity: { label: 'Actividad comunitaria', icon: 'calendar' },
   need_help: { label: 'Pedido de ayuda', icon: 'hand' },
   alert: { label: 'Alerta vecinal', icon: 'bell' },
+  emergency: { label: 'Emergencia', icon: 'bell' },
 }
 const publishedDate = new Intl.DateTimeFormat('es-PE', {
   day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
@@ -35,32 +36,37 @@ async function closeSettings() {
   settingsButton.value?.focus()
 }
 
-onMounted(() => { void refresh() })
+function refreshNotices() {
+  void refresh()
+  void refreshEmergencies()
+}
+
+onMounted(refreshNotices)
 </script>
 
 <template>
   <CommunityNotificationDetail v-if="selected" :notice="selected" @back="back" @close="$emit('close')" />
   <CommunityNotificationSettings v-else-if="settingsOpen" @back="closeSettings" />
   <div v-else class="notification-center">
-    <div v-if="failed" role="status" class="notice-status">
-      <p>No pudimos actualizar los avisos.</p>
-      <button type="button" class="text-link" @click="refresh()">Reintentar</button>
+    <div v-if="failed || emergenciesFailed" role="status" class="notice-status">
+      <p>{{ emergenciesFailed ? 'No pudimos actualizar las emergencias.' : 'No pudimos actualizar los avisos.' }}</p>
+      <button type="button" class="text-link" @click="refreshNotices">Reintentar</button>
     </div>
-    <p v-if="!snapshot && !failed" class="notice-status" role="status">Cargando avisos…</p>
-    <p v-else-if="snapshot && !snapshot.has_district" class="notice-status">Completa tu distrito para ver los avisos de tu comunidad.</p>
-    <template v-else-if="snapshot">
+    <p v-if="!snapshot && !failed && !notices.length" class="notice-status" role="status">Cargando avisos…</p>
+    <p v-else-if="snapshot && !snapshot.has_district && !notices.length" class="notice-status">Completa tu distrito para ver los avisos de tu comunidad.</p>
+    <template v-else-if="snapshot?.has_district || notices.length">
       <section aria-labelledby="notices-heading" class="notice-section">
         <div class="notice-heading">
           <div class="notice-heading-copy">
             <h3 id="notices-heading">Avisos del distrito</h3>
             <span v-if="unread" class="unread-count">{{ unread }} sin leer</span>
           </div>
-          <button ref="settings-button" type="button" class="visibility-button" @click="settingsOpen = true">
+          <button v-if="snapshot?.has_district" ref="settings-button" type="button" class="visibility-button" @click="settingsOpen = true">
             <AppIcon name="eye" :size="16" /> Visibilidad
           </button>
         </div>
-        <ul v-if="snapshot.data.length" ref="notices" class="notice-list">
-          <li v-for="notice in snapshot.data" :key="notice.id">
+        <ul v-if="notices.length" ref="notices" class="notice-list">
+          <li v-for="notice in notices" :key="notice.id">
             <button
               type="button"
               class="notice-row"
@@ -70,15 +76,16 @@ onMounted(() => { void refresh() })
               @click="selected = notice"
             >
               <span class="notice-avatar">
-                <CommunityNotificationAvatar :person="notice.author" :size="44" />
-                <span class="notice-icon"><AppIcon :name="types[notice.kind].icon" :size="13" /></span>
+                <CommunityNotificationAvatar v-if="notice.author" :person="notice.author" :size="44" />
+                <span v-else class="empty-icon"><AppIcon name="bell" :size="20" /></span>
+                <span v-if="notice.author" class="notice-icon"><AppIcon :name="types[notice.kind].icon" :size="13" /></span>
               </span>
               <span class="notice-copy">
                 <span class="notice-meta">
                   <span class="notice-type">{{ types[notice.kind].label }}</span>
                   <span v-if="!notice.read" class="notice-new">Nuevo</span>
                 </span>
-                <strong>{{ notice.author.name }}</strong>
+                <strong v-if="notice.author">{{ notice.author.name }}</strong>
                 <span>{{ notice.summary }}</span>
                 <time :datetime="notice.published_at">{{ publishedDate.format(new Date(notice.published_at)) }}</time>
               </span>
@@ -86,15 +93,16 @@ onMounted(() => { void refresh() })
             </button>
           </li>
         </ul>
-        <div v-else class="notice-empty">
+        <p v-else-if="!emergenciesReady && !emergenciesFailed" class="notice-status" role="status">Consultando emergencias…</p>
+        <div v-else-if="!failed && !emergenciesFailed" class="notice-empty">
           <span class="empty-icon"><AppIcon name="bell" :size="23" /></span>
           <div>
             <strong>Estás al día</strong>
-            <p class="notice-status">Por ahora no hay actividades, pedidos de ayuda ni alertas recientes.</p>
+            <p class="notice-status">Por ahora no hay avisos recientes en tu distrito.</p>
           </div>
         </div>
       </section>
-      <section aria-labelledby="active-neighbors-heading" class="presence-section">
+      <section v-if="snapshot" aria-labelledby="active-neighbors-heading" class="presence-section">
         <h3 id="active-neighbors-heading"><AppIcon name="users" :size="17" /> Vecinos activos cerca</h3>
         <ul v-if="snapshot.active.length" class="presence-list">
           <li v-for="person in snapshot.active" :key="person.id">
@@ -252,10 +260,11 @@ onMounted(() => { void refresh() })
 .notice-row[data-kind='need_help'] {
   --notice-ink: var(--presence-ink);
 }
-.notice-row[data-kind='alert'] {
+.notice-row:is([data-kind='alert'], [data-kind='emergency']) {
   --notice-ink: var(--local-accent-text);
 }
-.notice-row[data-kind='alert'].notice-unread {
+.notice-row[data-kind='alert'].notice-unread,
+.notice-row[data-kind='emergency'] {
   border-color: var(--local-accent-line);
   border-radius: 14px;
   background: var(--local-accent-fill);

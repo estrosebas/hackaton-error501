@@ -104,6 +104,63 @@ class CommunityNotificationTest extends TestCase
         $this->assertNull($author->fresh()->community_active_at);
     }
 
+    public function test_open_emergencies_reach_the_district_independently_of_presence_and_the_regular_notice_limit(): void
+    {
+        $this->getJson('/api/v1/notifications/emergencies')->assertUnauthorized();
+        $author = $this->neighbor();
+        $viewer = $this->neighbor();
+        $sharing = $this->neighbor();
+        $blocked = $this->neighbor();
+        $outside = $this->neighbor('080101');
+
+        Sanctum::actingAs($author);
+        $emergency = $this->postJson('/api/v1/feed', [
+            'kind' => 'emergency', 'body' => 'Se está inundando mi casa. Necesito bolsas de arena.', 'ubigeo' => $outside->ubigeo,
+        ])->assertCreated()->assertJsonPath('data.kind', 'emergency')->json('data.id');
+        $this->assertDatabaseHas('community_posts', ['id' => $emergency, 'ubigeo' => $author->ubigeo]);
+        $this->getJson('/api/v1/notifications/emergencies')->assertOk()->assertJsonCount(0, 'data');
+
+        for ($i = 0; $i < 31; $i++) {
+            CommunityPost::create([
+                'user_id' => $author->id, 'ubigeo' => $author->ubigeo, 'kind' => 'activity', 'body' => 'Actividad '.$i,
+            ]);
+        }
+
+        Sanctum::actingAs($viewer);
+        $this->assertFalse($viewer->fresh()->share_community_presence);
+        $this->postJson('/api/v1/notifications/sync')->assertOk()->assertJsonCount(30, 'data')->assertJsonMissing(['kind' => 'emergency']);
+        $this->getJson('/api/v1/notifications/emergencies')->assertOk()->assertHeaderContains('Cache-Control', 'no-store')
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $emergency)->assertJsonPath('data.0.author.id', $author->id)
+            ->assertJsonPath('data.0.read', false);
+        $this->putJson("/api/v1/notifications/$emergency/read")->assertNoContent();
+        $this->getJson('/api/v1/notifications/emergencies')->assertOk()->assertJsonPath('data.0.read', true);
+
+        Sanctum::actingAs($sharing);
+        $this->putJson('/api/v1/notifications/presence', ['sharing' => true])->assertNoContent();
+        $this->getJson('/api/v1/notifications/emergencies')->assertOk()
+            ->assertJsonPath('data.0.id', $emergency)->assertJsonPath('data.0.read', false);
+        $this->getJson("/api/v1/feed/$emergency")->assertOk()
+            ->assertJsonPath('data.paragraphs.0', 'Se está inundando mi casa. Necesito bolsas de arena.');
+
+        Sanctum::actingAs($blocked);
+        $this->putJson("/api/v1/neighbors/{$author->id}/block", ['blocked' => true])->assertOk();
+        $this->getJson('/api/v1/notifications/emergencies')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.author', null)->assertJsonPath('data.0.summary', 'Se reportó una emergencia en tu distrito.');
+        $this->getJson("/api/v1/feed/$emergency")->assertNotFound();
+        $this->getJson('/api/v1/feed?kind=emergency')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("/api/v1/feed/$emergency/comments")->assertNotFound();
+        $this->putJson("/api/v1/notifications/$emergency/read")->assertNoContent();
+
+        Sanctum::actingAs($outside);
+        $this->getJson('/api/v1/notifications/emergencies')->assertOk()->assertJsonCount(0, 'data');
+        $this->putJson("/api/v1/notifications/$emergency/read")->assertNotFound();
+
+        Sanctum::actingAs($author);
+        $this->patchJson("/api/v1/feed/$emergency", ['status' => 'resolved'])->assertOk();
+        Sanctum::actingAs($viewer);
+        $this->getJson('/api/v1/notifications/emergencies')->assertOk()->assertJsonCount(0, 'data');
+    }
+
     public function test_community_avatar_is_an_explicit_scoped_thumbnail_and_can_be_removed(): void
     {
         Storage::fake('local');

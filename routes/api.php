@@ -57,6 +57,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('feed/{post}', [CommunityController::class, 'state']);
         Route::delete('feed/{post}', [CommunityController::class, 'destroy']);
         Route::post('notifications/sync', [CommunityNotificationController::class, 'sync'])->middleware('throttle:30,1');
+        Route::get('notifications/emergencies', [CommunityNotificationController::class, 'emergencies'])->middleware('throttle:30,1,community-emergencies:');
         Route::put('notifications/presence', [CommunityNotificationController::class, 'presence'])->middleware('throttle:15,1');
         Route::put('notifications/{post}/read', [CommunityNotificationController::class, 'read'])->whereNumber('post')->middleware('throttle:60,1');
         Route::post('profile/community-avatar', [CommunityAvatarController::class, 'update'])->middleware(['can:profile.update', 'throttle:6,1']);

@@ -114,17 +114,20 @@ Todas las rutas requieren Sanctum y operan únicamente dentro del UBIGEO del usu
 | Método | Ruta | Comportamiento |
 | --- | --- | --- |
 | POST | `/notifications/sync` | Devuelve `data` (avisos), `active` (vecinos activos), `sharing_presence`, `my_avatar` y `has_district`. Renueva la presencia de la cuenta si activó la opción |
+| GET | `/notifications/emergencies` | Devuelve en `data` las emergencias abiertas publicadas por otros vecinos en el UBIGEO registrado de la cuenta |
 | PUT | `/notifications/{post}/read` | Marca un aviso como leído para la cuenta autenticada. Operación idempotente |
 | PUT | `/notifications/presence` | Guarda la preferencia `sharing: boolean`, desactivada por defecto |
 | POST | `/profile/community-avatar` | Comparte una miniatura WebP de hasta 160 px sin metadatos. Multipart con `photo` en JPEG, PNG o WebP, hasta 2 MiB |
 | DELETE | `/profile/community-avatar` | Retira la miniatura comunitaria |
 | GET | `/neighbors/{neighbor}/community-avatar` | Sirve la miniatura comunitaria con Bearer a vecinos del mismo distrito sin bloqueos entre ambos |
 
-El panel lista hasta 30 publicaciones de actividad, pedido de ayuda y alerta de los últimos siete días. Excluye las publicaciones propias y las sintéticas. Los avisos incluyen un resumen, fecha, estado de lectura y autor. El avatar se representa con una versión opaca y queda vacío si el vecino no compartió una imagen.
+La bandeja coloca las emergencias abiertas antes de los avisos ordinarios. Los avisos ordinarios conservan el límite de 30 publicaciones de los últimos siete días. Cada aviso incluye resumen, fecha, estado de lectura y autor. El avatar se representa con una versión opaca y queda vacío si el vecino no compartió una imagen.
 
 La vista se actualiza cada 20 segundos mientras la aplicación está visible. El listado de presencia muestra hasta 20 vecinos del distrito que optaron por compartir su estado y sincronizaron en los últimos 90 segundos. Una alerta vecinal nueva también muestra un aviso en pantalla mientras la aplicación está visible. La miniatura comunitaria se sube por separado del avatar privado y de la foto biométrica.
 
-Categorías `moment`, `need_help`, `offer_help`, `collaboration`, `initiative`, `activity` y `alert`. Un `moment` puede contener solo fotos. Para programar una actividad, enviar juntos `activity_title` (hasta 100 caracteres), `activity_starts_at` (fecha futura ISO 8601 con zona) y `activity_location` (hasta 160 caracteres). La respuesta expone estos campos como `activity: { title, starts_at, location }` e indica cuántas fotos contiene con `photo_count`. Conserva `has_photo` para clientes previos.
+La app visible consulta emergencias cada cinco segundos y al volver a primer plano. La señal aparece en pantalla y sigue disponible en la bandeja hasta que la publicación se marque como atendida o se retire. La recepción funciona aunque la cuenta tenga la presencia oculta. Cuando hay un bloqueo entre el autor y el destinatario, el aviso contiene un texto genérico y `author: null`, y se restringe el acceso al contenido de la publicación.
+
+Categorías `moment`, `need_help`, `offer_help`, `collaboration`, `initiative`, `activity`, `alert` y `emergency`. Un `moment` puede contener solo fotos. Para programar una actividad, enviar juntos `activity_title` (hasta 100 caracteres), `activity_starts_at` (fecha futura ISO 8601 con zona) y `activity_location` (hasta 160 caracteres). La respuesta expone estos campos como `activity: { title, starts_at, location }` e indica cuántas fotos contiene con `photo_count`. Conserva `has_photo` para clientes previos.
 
 Las listas devuelven `data` y `next_cursor`. Las modificaciones devuelven `data`, salvo comentarios (mensaje) y eliminación (204). Las fotos publicadas se recodifican con PHP GD y WebP para eliminar metadatos y se guardan en el disco privado. Las fotos biométricas y los adjuntos personales mantienen el acceso exclusivo del propietario. El servidor extrae hasta cinco hashtags mediante Spatie Tags.
 

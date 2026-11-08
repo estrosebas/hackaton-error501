@@ -3,14 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\CommunityPost;
+use App\Services\NeighborConnections;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CommentReactionController extends Controller
 {
-    public function __invoke(Request $request, CommunityPost $post, int $comment)
+    public function __invoke(Request $request, CommunityPost $post, int $comment, NeighborConnections $connections)
     {
         abort_unless($request->user()->ubigeo && $post->ubigeo === $request->user()->ubigeo, 404);
+        abort_if($post->kind === 'emergency' && $connections->blocked($request->user()->id, $post->user_id), 404);
         $data = $request->validate(['selected' => ['required', 'boolean']]);
         DB::transaction(function () use ($request, $post, $comment, $data) {
             $post->comments()->whereKey($comment)->lockForUpdate()->firstOrFail();

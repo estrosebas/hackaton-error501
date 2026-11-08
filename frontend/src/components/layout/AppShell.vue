@@ -3,6 +3,7 @@ import { computed, shallowRef, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import CommunityHeader from '../community/CommunityHeader.vue'
+import CommunityEmergencyBanner from '../community/CommunityEmergencyBanner.vue'
 import BottomNavigation from '../community/BottomNavigation.vue'
 import { navigationItems } from '../community/navigation'
 import CommunityPanels, { type Panel } from '../community/CommunityPanels.vue'
@@ -17,8 +18,16 @@ const router = useRouter()
 const tabDirection = shallowRef<'forward' | 'back'>()
 const panel = shallowRef<Panel | null>(null)
 const message = useMessage()
-const { unread } = provideCommunityNotifications((count) => {
-  message.warning(count === 1 ? 'Nueva alerta vecinal en tu distrito' : `${count} alertas vecinales nuevas en tu distrito`)
+const { unread, unreadEmergencies } = provideCommunityNotifications({
+  onNewAlerts: (count) => {
+    message.warning(count === 1 ? 'Nueva alerta vecinal en tu distrito' : `${count} alertas vecinales nuevas en tu distrito`)
+  },
+  onNewEmergencies: (count) => {
+    message.error(count === 1 ? 'Nueva emergencia en tu distrito' : `${count} emergencias nuevas en tu distrito`, {
+      duration: 6500,
+      closable: true,
+    })
+  },
 })
 const selectedActivityId = shallowRef<string>()
 const selectedActivity = computed(() =>
@@ -81,6 +90,7 @@ watch(
       :compact="compactHeader"
       @open="openPanel"
     />
+    <CommunityEmergencyBanner :count="unreadEmergencies.length" @open="openPanel('notifications')" />
     <main id="page-content" class="community-content" :data-tab-direction="tabDirection" tabindex="-1">
       <RouterView v-slot="{ Component }">
         <Transition name="community-page" @leave="removePreviousView">

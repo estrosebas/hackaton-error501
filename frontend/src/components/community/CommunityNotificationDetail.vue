@@ -32,6 +32,10 @@ watch([() => props.notice.id, attempt], async ([id], _, onCleanup) => {
   onCleanup(() => request.abort())
   post.value = undefined
   error.value = ''
+  if (!props.notice.author) {
+    if (!props.notice.read) void markRead(id)
+    return
+  }
   try {
     const result = await api<{ data: Post }>(`/feed/${id}`, { signal: request.signal })
     if (request.signal.aborted) return
@@ -57,6 +61,10 @@ watch(backButton, (button) => button?.focus(), { flush: 'post' })
       <p>{{ error }}</p>
       <button type="button" class="text-link notice-back" @click="attempt++">Reintentar</button>
     </div>
+    <article v-else-if="!notice.author">
+      <h3>Emergencia</h3>
+      <p>{{ notice.summary }}</p>
+    </article>
     <p v-else-if="!post" role="status">Cargando publicación…</p>
     <article v-else>
       <RouterLink
@@ -69,11 +77,11 @@ watch(backButton, (button) => button?.focus(), { flush: 'post' })
       </RouterLink>
       <PostCaption :post="post" />
       <PostPhotoGallery v-if="post.has_photo" :post-id="post.id" :count="post.photo_count ?? 1" />
-      <div v-if="readError" role="alert">
-        <p>No pudimos guardar la lectura.</p>
-        <button type="button" class="text-link notice-back" @click="markRead(notice.id)">Marcar como leída</button>
-      </div>
     </article>
+    <div v-if="readError" role="alert">
+      <p>No pudimos guardar la lectura.</p>
+      <button type="button" class="text-link notice-back" @click="markRead(notice.id)">Marcar como leída</button>
+    </div>
   </section>
 </template>
 
