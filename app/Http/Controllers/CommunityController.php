@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\CommunityPost;
 use App\Services\CommunityPhoto;
+use App\Services\EndorsedFeed;
 use App\Services\NeighborConnections;
 use App\Services\PersonalizedFeed;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -59,6 +61,9 @@ class CommunityController extends Controller
     public function index(Request $request)
     {
         $data = $request->validate(['kind' => ['nullable', Rule::in(self::KINDS)], 'saved' => ['nullable', 'boolean'], 'cursor' => ['nullable', 'string', 'max:2048']]);
+        $search = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'category' => ['nullable', 'string', 'max:100']]);
+        $term = trim($search['q'] ?? '');
+        $category = trim($search['category'] ?? '');
         $viewer = $request->user();
         abort_unless($viewer->ubigeo, 422, 'Completa tu distrito para ver la comunidad.');
         $posts = CommunityPost::where('ubigeo', $viewer->ubigeo)
@@ -67,7 +72,25 @@ class CommunityController extends Controller
             ->when($data['kind'] ?? null, fn ($q, $kind) => $q->where('kind', $kind))
             ->when($request->boolean('saved'), fn ($q) => $q->whereIn('id', DB::table('community_bookmarks')->select('post_id')->where('user_id', $request->user()->id)))
             ->with(['author:id,name,neighborhood,demo_key,demo_avatar', 'tags'])->withCount('comments');
-        [$items, $nextCursor] = app(PersonalizedFeed::class)->paginate($posts, $viewer, $data['cursor'] ?? null, ! $request->filled('kind') && ! $request->boolean('saved'));
+        // Literal substring matching, with case/accent normalization and no SQL interpolation.
+        $normalize = fn ($s) => mb_strtolower(Str::ascii($s));
+        if ($term !== '') {
+            foreach (preg_split('/\s+/u', $normalize($term), flags: PREG_SPLIT_NO_EMPTY) as $word) {
+                $posts->whereRaw("strpos(translate(lower(community_posts.body),'áéíóúüñ','aeiouun'), ?) > 0", [$word]);
+            }
+        }
+        if ($category !== '') {
+            $topic = collect(config('feed-interests.topics'))->search(fn ($item, $id) => $normalize($id) === $normalize($category) || $normalize($item['label']) === $normalize($category));
+            $accepted = array_unique([$normalize($category), $topic ?: $normalize($category)]);
+            $posts->whereHas('tags', fn ($q) => $q->whereIn('type', ['category', 'feed_topic', 'hashtag'])->where(function ($q) use ($accepted) {
+                foreach ($accepted as $name) {
+                    $q->orWhereRaw("translate(lower(COALESCE(name->>'es',name->>'en','')),'áéíóúüñ','aeiouun') = ?", [$name]);
+                }
+            }));
+            [$items,$nextCursor] = app(EndorsedFeed::class)->paginate($posts, $viewer, $data['cursor'] ?? null, [$term, $category, $data['kind'] ?? null, $request->boolean('saved')]);
+        } else {
+            [$items, $nextCursor] = app(PersonalizedFeed::class)->paginate($posts, $viewer, $data['cursor'] ?? null, $term === '' && ! $request->filled('kind') && ! $request->boolean('saved'));
+        }
 
         $ids = $items->pluck('id');
         $counts = DB::table('community_reactions')->whereIn('post_id', $ids)->selectRaw('post_id, count(*) as total')->groupBy('post_id')->pluck('total', 'post_id');

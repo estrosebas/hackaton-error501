@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NeighborEndorsement from '../components/neighbors/NeighborEndorsement.vue'
 import { computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { NButton } from 'naive-ui'
@@ -134,7 +135,7 @@ onBeforeUnmount(() => { generation++ })
     <p v-else class="profile-status" role="status">Cargando perfil…</p>
 
     <template v-if="neighbor" #presentation>
-      <ProfilePresentation
+      <NeighborEndorsement v-if="neighbor" :neighbor-id="neighbor.id" :name="neighbor.name"/><ProfilePresentation
         title="Presentación"
         description="Lo que comparte con sus vecinos en su perfil."
         empty-message="Este perfil todavía no tiene una presentación, habilidades ni intereses."

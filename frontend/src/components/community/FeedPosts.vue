@@ -20,7 +20,7 @@ const {
   loading,
   error,
   kind,
-  savedOnly,
+  savedOnly, searchText, categoryFilter,
   nextCursor,
   loadPosts,
   loadComments,
@@ -66,7 +66,10 @@ watch([loading, nextCursor], async () => {
   loadVisible()
 })
 onBeforeUnmount(() => observer?.disconnect())
-const filtered = computed(() => Boolean(kind.value || savedOnly.value))
+const filtered = computed(() => Boolean(kind.value || savedOnly.value || searchText.value.trim() || categoryFilter.value.trim()))
+const draftSearch=ref(searchText.value),draftCategory=ref(categoryFilter.value)
+const categorySuggestions=computed(()=>[...new Set(posts.value.flatMap(post=>post.categories||[]))])
+function searchFeed(){if(loading.value)return;searchText.value=draftSearch.value;categoryFilter.value=draftCategory.value;refresh()}
 const kindOptions = [{ label: 'Todas', value: '' }, ...postKinds]
 const timeline = computed(() => {
   const activityIds = new Set(activities.value.map((activity) => activity.id))
@@ -99,6 +102,7 @@ function toggleSaved() {
 function clearFilters() {
   kind.value = ''
   savedOnly.value = false
+  searchText.value='';categoryFilter.value='';draftSearch.value='';draftCategory.value=''
   void loadPosts()
 }
 
@@ -117,7 +121,7 @@ function deletePost(id: string) {
         <p>{{currentUser?.feed_interests?.length ? 'Para ti · Gustos y publicaciones recientes de tu distrito' : 'Publicaciones de tu distrito'}}</p>
       </div>
     </header>
-    <div class="feed-filters">
+    <form class="feed-search" @submit.prevent="searchFeed"><label>Palabras<input v-model="draftSearch" maxlength="100" placeholder="Ej. reparar una llanta" /></label><label>Categoría<input v-model="draftCategory" list="feed-categories" maxlength="100" placeholder="Ej. Mecánica, Música" /></label><datalist id="feed-categories"><option v-for="item in categorySuggestions" :key="item" :value="item"/></datalist><button type="submit" :disabled="loading">Buscar</button><p v-if="categoryFilter.trim()">Primero los vecinos con más vistos buenos. El respaldo es al vecino, no una certificación del servicio.</p></form><div class="feed-filters">
       <AppSelect
         class="feed-kind"
         :value="kind"
@@ -199,7 +203,7 @@ function deletePost(id: string) {
   </section>
 </template>
 
-<style scoped>
+<style scoped>.feed-search{display:flex;flex-wrap:wrap;gap:10px;padding:12px var(--local-gutter)}.feed-search label{display:grid;gap:5px;flex:1;min-width:120px;font-size:11px;color:var(--muted)}.feed-search input{min-width:0;width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft);color:var(--text)}.feed-search button{align-self:end;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-raised);color:var(--lavender)}.feed-search p{width:100%;font-size:11px;color:var(--muted);margin:0}
 .feed-scroll-state {
   min-height: 65px;
   padding: 16px;

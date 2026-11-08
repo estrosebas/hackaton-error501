@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NeighborEndorsement from '../neighbors/NeighborEndorsement.vue'
 import { shallowRef, useTemplateRef } from 'vue'
 import { NAvatar, NButton, NInput, type InputInst } from 'naive-ui'
 import type { Comment } from '../../composables/useCommunity'
@@ -62,6 +63,7 @@ defineExpose({ focus: () => input.value?.focus() })
             >
             {{ comment.text }}
           </p>
+          <NeighborEndorsement :neighbor-id="comment.author_id" :name="comment.author" compact/>
           <div class="comment-meta">
             <span>{{ comment.time }}</span
             ><button

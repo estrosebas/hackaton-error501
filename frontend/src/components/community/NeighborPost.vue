@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NeighborEndorsement from '../neighbors/NeighborEndorsement.vue'
 import { computed, nextTick, shallowRef, useTemplateRef } from 'vue'
 import { NAvatar, NDropdown } from 'naive-ui'
 import type { Post } from '../../composables/useCommunity'
@@ -115,7 +116,7 @@ async function toggleComments(focus: boolean) {
       </NDropdown>
     </header>
 
-    <PostPhotoGallery
+    <NeighborEndorsement :neighbor-id="post.author_id" :name="post.author" compact class="post-text"/><PostPhotoGallery
       v-if="post.has_photo"
       :post-id="post.id"
       :count="post.photo_count ?? 1"

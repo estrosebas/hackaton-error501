@@ -88,6 +88,7 @@ function createCommunity() {
     error = ref(''),
     kind = ref(''),
     savedOnly = ref(false)
+  const searchText=ref(''), categoryFilter=ref('')
   const nextCursor = ref<string | null>(null)
   const retryMore = ref(false)
   const pending = new Set<string>()
@@ -116,6 +117,8 @@ function createCommunity() {
     loading.value = true
     error.value = ''
     const query = new URLSearchParams()
+    if(searchText.value.trim())query.set('q',searchText.value.trim())
+    if(categoryFilter.value.trim())query.set('category',categoryFilter.value.trim())
     if (kind.value) query.set('kind', kind.value)
     if (savedOnly.value) query.set('saved', '1')
     if (more && nextCursor.value) query.set('cursor', nextCursor.value)
@@ -327,7 +330,7 @@ function createCommunity() {
     loading,
     error,
     kind,
-    savedOnly,
+    savedOnly, searchText, categoryFilter,
     nextCursor,
     retryMore,
     toggleCommentLike,

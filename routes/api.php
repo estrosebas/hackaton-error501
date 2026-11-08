@@ -13,6 +13,7 @@ use App\Http\Controllers\FeedInterestController;
 use App\Http\Controllers\MapEventController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\NeighborController;
+use App\Http\Controllers\NeighborEndorsementController;
 use App\Http\Controllers\PasswordRecoveryController;
 use App\Http\Controllers\PrivateProfileController;
 use App\Http\Controllers\ProfileController;
@@ -38,6 +39,8 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/forgot-password', [PasswordRecoveryController::class, 'requestLink'])->middleware('throttle:3,1,password-recovery-request');
     Route::post('auth/reset-password', [PasswordRecoveryController::class, 'reset'])->middleware('throttle:6,1,password-recovery-reset');
     Route::middleware('auth:sanctum')->group(function () {
+        Route::get('neighbors/{neighbor}/endorsement', [NeighborEndorsementController::class, 'show']);
+        Route::put('neighbors/{neighbor}/endorsement', [NeighborEndorsementController::class, 'update'])->middleware('throttle:30,1,neighbor-endorsements');
         Route::get('map-events/catalog', [MapEventController::class, 'catalog']);
         Route::get('map-events', [MapEventController::class, 'index']);
         Route::get('map-events/{event}', [MapEventController::class, 'show'])->whereNumber('event');

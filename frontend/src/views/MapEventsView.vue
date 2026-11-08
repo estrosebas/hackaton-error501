@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import {computed,onMounted,onBeforeUnmount,ref,watch} from 'vue'
 import {RouterLink, useRouter} from 'vue-router'
-import {NButton,NInput,NSelect,NDrawer,NDrawerContent} from 'naive-ui'
+import {NButton,NInput,NDrawer,NDrawerContent} from 'naive-ui'
 import {latLng} from 'leaflet'
 import AppIcon from '../components/AppIcon.vue'
 import '../components/neighbors/nearby-neighbors.css'
 import CommunityEventMap from '../components/events/CommunityEventMap.vue'
-import MapNeighborhoodAvatars from '../components/events/MapNeighborhoodAvatars.vue'
 import MapEventPhoto from '../components/events/MapEventPhoto.vue'
 import {useMapEvents,currentPosition,type MapEvent} from '../composables/useMapEvents'
 import {Capacitor} from '@capacitor/core'
@@ -161,7 +160,6 @@ onBeforeUnmount(()=>clearInterval(timer))
             </button>
             <button
               type="button"
-              :class="{ active: mode === 'list' }"
               aria-label="Ver lista"
               @click="mode = 'list'"
             >
@@ -386,7 +384,7 @@ onBeforeUnmount(()=>clearInterval(timer))
             </button>
           </div>
           <div class="neighbor-view-switch" role="group" aria-label="Vista de eventos">
-            <button type="button" :class="{ selected: mode === 'map' }" aria-label="Ver mapa" @click="mode = 'map'">
+            <button type="button" aria-label="Ver mapa" @click="mode = 'map'">
               <AppIcon name="map" :size="19" />
             </button>
             <button type="button" :class="{ selected: mode === 'list' }" aria-label="Ver lista" @click="mode = 'list'">

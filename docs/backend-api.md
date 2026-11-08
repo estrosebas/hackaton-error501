@@ -96,6 +96,16 @@ El servidor conserva esta selección y la devuelve al titular en `GET /profile`.
 
 ## Feed comunitario
 
+### Visto bueno vecinal y búsqueda
+
+El visto bueno respalda al vecino, independientemente de sus publicaciones/comentarios y de los «Me gusta». `GET /neighbors/{neighbor}/endorsement` devuelve `{data:{neighbor_id,count,selected}}`. `PUT` en la misma ruta recibe `{selected:boolean}`: establecer `true` repetidamente mantiene un único respaldo por pareja emisor/receptor; `false` lo retira. No hay autorrespaldos, cruces de distrito ni respaldos entre cuentas bloqueadas. No concede puntos de empatía. Los contadores son agregados, sin publicar listas ni datos privados de quienes respaldaron. La BD impone la unicidad y los cambios usan el mismo orden de bloqueo de usuarios que las relaciones vecinales.
+
+El cliente comparte el estado del botón por vecino: publicaciones, comentarios y perfiles muestran el mismo respaldo. Mi perfil muestra los vistos buenos recibidos. Este contador no certifica una contratación, un oficio ni la calidad de un servicio.
+
+`GET /feed` acepta `q` (hasta 100 caracteres; todas las palabras deben aparecer en el texto, sin distinguir mayúsculas/acentos) y `category` (nombre de categoría, hashtag o identificador/etiqueta de tema). Los filtros se combinan con `kind` y `saved`. Al filtrar categoría, ordena por vistos buenos recibidos por el autor y después por publicación más reciente; los respaldos son generales al vecino y no específicos de esa categoría. Sin categoría, la búsqueda textual es cronológica; el feed sin filtros conserva su personalización.
+
+La búsqueda por categoría fija el orden de resultados al abrirla para que los cambios de respaldos no dupliquen publicaciones durante el scroll. Su cursor cifrado está vinculado al usuario, distrito y filtros, y dura 15 minutos. Refrescar actualiza el ranking. Por búsqueda admite hasta 5000 resultados; si se supera, pide afinar con palabras. Cada página vuelve a aplicar el ámbito y los permisos actuales. No cambia el ranking del mapa ni su asistencia.
+
 El mapa tiene eventos y puntos de empatía propios, separados del feed. Ver rutas, categorías, inscripción y validación espacial en [map-events.md](map-events.md).
 
 ### Datos privados y gustos

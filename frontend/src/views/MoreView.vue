@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NeighborEndorsement from '../components/neighbors/NeighborEndorsement.vue'
 import { useMessage } from 'naive-ui'
 import { computed, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
@@ -45,7 +46,7 @@ async function signOut() {
     </ProfileIdentity>
 
     <template #presentation>
-      <ProfileEditor />
+      <NeighborEndorsement v-if="currentUser" :neighbor-id="currentUser.id" :name="currentUser.name"/><ProfileEditor />
       <PrivateAccountCard />
       <FeedInterestsCard />
     </template>
