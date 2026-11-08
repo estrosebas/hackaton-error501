@@ -84,7 +84,13 @@ class User extends Authenticatable implements HasMedia
 
     public function demoAvatarUrl(): string
     {
-        return app()->environment('local') && config('demo-feed.enabled') && $this->demo_key && $this->demo_avatar
-            ? '/api/v1/demo/avatars/'.$this->demo_avatar : '';
+        if (! $this->demo_key || ! $this->demo_avatar) {
+            return '';
+        }
+        if (config('demo-feed.showcase')) {
+            return rtrim(config('app.url'), '/').'/api/v1/demo/avatars/'.$this->demo_avatar;
+        }
+
+        return app()->environment('local') && config('demo-feed.enabled') ? '/api/v1/demo/avatars/'.$this->demo_avatar : '';
     }
 }

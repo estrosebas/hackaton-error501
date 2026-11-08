@@ -6,7 +6,8 @@ const BASE = '/face-accessories';
 // Cambiar un peso cambia su URL. Una respuesta antigua con MIME incorrecto
 // tampoco se reutiliza, porque antes estos recursos no estaban versionados.
 function recurso(path) {
-    return new URL(`${BASE}/${path}?v=${manifest.files[path]}`, window.location.origin).href;
+    const version = manifest.files[path] + (path.endsWith('.mjs') ? '-js1' : '');
+    return new URL(`${BASE}/${path}?v=${version}`, window.location.origin).href;
 }
 
 export async function crearDetectorAccesorios(vision, archivos) {

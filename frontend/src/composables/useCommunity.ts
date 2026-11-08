@@ -22,6 +22,7 @@ export interface Comment {
 }
 
 export interface Post {
+  is_demo?: boolean
   id: string
   author_id: number
   kind: string
@@ -296,6 +297,9 @@ function createCommunity() {
     }
   }
   async function remove(id: string) {
+    const key = `remove:${id}`
+    if (pending.has(key)) return false
+    pending.add(key)
     try {
       await api(`/feed/${id}`, { method: 'DELETE' })
       posts.value = posts.value.filter((p) => p.id !== id)
@@ -305,8 +309,12 @@ function createCommunity() {
         )
         void loadActivities()
       }
+      return true
     } catch (e) {
       fail(e)
+      return false
+    } finally {
+      pending.delete(key)
     }
   }
   onMounted(() => {

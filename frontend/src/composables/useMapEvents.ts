@@ -9,6 +9,7 @@ export interface MapCategory { id:string; label:string; emoji:string; color:stri
 export interface EventFrame { id:string; label:string; points:number; color:string; style:string; unlocked:boolean }
 export interface MapEvent { id:number;title:string;description:string;category:string;type:string|null;place:string;starts_at:string;ends_at:string;latitude:number;longitude:number;has_cost:boolean;points:number;frame:string|null;has_photo:boolean;author:{id:number;name:string;avatar?:string;has_community_avatar?:boolean};is_owner:boolean;joined:boolean;attended:boolean;participants:number;cancelled:boolean }
 export interface MapCatalog { points:number;categories:MapCategory[];frames:EventFrame[] }
+const catalogRequests=new Map<string,Promise<MapCatalog>>()
 export async function currentPosition(){
   if(Capacitor.isNativePlatform())await Geolocation.requestPermissions()
   const position=await Geolocation.getCurrentPosition({enableHighAccuracy:true,maximumAge:0,timeout:15000})
@@ -20,7 +21,13 @@ export function useMapEvents(){
   const events=ref<MapEvent[]>([]),catalog=ref<MapCatalog>({points:0,categories:[],frames:[]}),error=ref(''),loading=ref(false),hasMore=ref(false)
   const offline=ref(false),cachedAt=ref<number>(); const controller=new AbortController()
   const options={signal:controller.signal,cache:'no-store' as RequestCache}
-  async function loadCatalog(){catalog.value=await api<MapCatalog>('/map-events/catalog',options)}
+  async function loadCatalog(){
+    const token=sessionStorage.getItem('masi.api.token') || ''
+    let request=catalogRequests.get(token)
+    if(!request){request=api<MapCatalog>('/map-events/catalog',{signal:AbortSignal.timeout(10000),cache:'no-store'});catalogRequests.set(token,request);void request.finally(()=>{if(catalogRequests.get(token)===request)catalogRequests.delete(token)}).catch(()=>{})}
+    const result=await request
+    if(!controller.signal.aborted&&sessionStorage.getItem('masi.api.token')===token)catalog.value=result
+  }
   async function load(){
     const token=sessionStorage.getItem('masi.api.token')
     loading.value=true;error.value=''

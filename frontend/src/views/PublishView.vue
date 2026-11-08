@@ -64,6 +64,7 @@ async function publishProduct(listing: NewListing) {
       <div>
         <h1>Comparte algo bueno</h1>
         <p>Una novedad, una pregunta o una segunda vida.</p>
+        <p>Publicar no suma puntos. Los puntos de empatía se acreditan al inscribirte y validar tu asistencia a un evento, durante su horario y a 100 m o menos.</p>
       </div>
     </div>
     <NTabs :value="kind" type="segment" animated @update:value="changeKind"

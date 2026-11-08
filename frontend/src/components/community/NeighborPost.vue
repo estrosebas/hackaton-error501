@@ -71,6 +71,7 @@ async function toggleComments(focus: boolean) {
 
 <template>
   <article class="neighbor-post" :class="{'neighbor-post--emergency':post.kind==='emergency'}" :aria-label="`${post.kind==='emergency'?'Emergencia':'Publicación'} de ${post.author}`">
+    <small v-if="post.is_demo" class="post-text" style="color:var(--muted)">Comunidad de demostración · perfil sintético</small>
     <div v-if="post.kind==='emergency'" class="post-emergency-banner"><span aria-hidden="true">🚨</span>{{post.status==='resolved'?'Emergencia atendida':'Emergencia vecinal'}}</div>
     <header class="post-heading">
       <NeighborLink :id="post.author_id" :name="post.author">

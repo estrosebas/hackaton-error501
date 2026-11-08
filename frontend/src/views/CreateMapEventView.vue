@@ -26,7 +26,7 @@ const form = reactive({
   has_cost: false, frame: '',
 })
 const point = ref({ lat: Number(currentUser.value?.latitude ?? -12.0464), lng: Number(currentUser.value?.longitude ?? -77.0428) })
-const confirmed = ref(false)
+const confirmed = ref(currentUser.value?.latitude != null && currentUser.value?.longitude != null)
 const saving = ref(false)
 const locating = ref(false)
 const loading = ref(true)

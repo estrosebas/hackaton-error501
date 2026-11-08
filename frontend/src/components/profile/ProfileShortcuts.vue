@@ -23,7 +23,7 @@ const groups = computed<{ title: string; items: Shortcut[] }[]>(() => [
       },
       {
         icon: 'pin',
-        label: 'Distrito de registro',
+        label: 'Barrio / zona de registro',
         detail: props.district,
         panel: 'neighborhood',
       },

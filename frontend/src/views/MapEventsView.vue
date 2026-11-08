@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed,onMounted,onBeforeUnmount,ref,watch} from 'vue'
-import {RouterLink, useRouter} from 'vue-router'
+import {RouterLink, useRouter, useRoute} from 'vue-router'
 import {NButton,NInput,NDrawer,NDrawerContent} from 'naive-ui'
 import {latLng} from 'leaflet'
 import AppIcon from '../components/AppIcon.vue'
@@ -66,6 +66,11 @@ function formatDistance(event?:{latitude:number;longitude:number}|null):string{
   return `a ${km} km`
 }
 const router = useRouter()
+const route = useRoute()
+watch([()=>route.query.event,events],()=>{
+  const event=events.value.find(item=>item.id===Number(route.query.event))
+  if(event){center.value={lat:event.latitude,lng:event.longitude};selected.value=event.id;detailsOpen.value=true;actionError.value=''}
+},{immediate:true})
 function openEvent(id:number){selected.value=id;actionError.value='';detailsOpen.value=true}
 function editEvent(event:MapEvent){detailsOpen.value=false;void router.push({name:'edit-map-event',params:{id:event.id}})}
 async function stopTracking(){tracking.value=false;try{await stopBackgroundLocation()}catch{actionError.value='No pudimos detener el servicio de ubicación. Intenta nuevamente.'}}

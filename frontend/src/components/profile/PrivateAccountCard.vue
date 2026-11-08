@@ -16,7 +16,7 @@ async function edit(){if(loading.value||saving.value)return;loading.value=true;e
   if(!data.value){loading.value=false;return}editing.value=true
   Object.assign(draft,{email:data.value.email,phone:data.value.phone||'',ubigeo:data.value.ubigeo||'',neighborhood:data.value.neighborhood||'',current_password:''})
   region.value=draft.ubigeo.slice(0,2);province.value=draft.ubigeo.slice(0,4)
-  try{regions.value=await places('/locations/regions');provinces.value=region.value?await places(`/locations/regions/${region.value}/provinces`):[];districts.value=province.value?await places(`/locations/provinces/${province.value}/districts`):[]}catch(e){fail(e)}finally{loading.value=false}
+  try{const lists=await Promise.all([places('/locations/regions'),region.value?places(`/locations/regions/${region.value}/provinces`):Promise.resolve([]),province.value?places(`/locations/provinces/${province.value}/districts`):Promise.resolve([])]);[regions.value,provinces.value,districts.value]=lists}catch(e){fail(e)}finally{loading.value=false}
 }
 async function changeRegion(){const version=++generation;province.value='';draft.ubigeo='';provinces.value=[];districts.value=[];loading.value=true
   try{const list=await places(`/locations/regions/${region.value}/provinces`);if(version===generation)provinces.value=list}catch(e){fail(e)}finally{if(version===generation)loading.value=false}

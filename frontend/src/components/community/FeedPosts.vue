@@ -5,6 +5,8 @@ import AppSelect from '../AppSelect.vue'
 import { currentUser } from '../../composables/useAuth'
 import NeighborPost from './NeighborPost.vue'
 import ActivityRail from './ActivityRail.vue'
+import MapEventRail from '../events/MapEventRail.vue'
+import { NModal, NCard, NButton, useMessage } from 'naive-ui'
 import {
   postKinds,
   useCommunity,
@@ -106,14 +108,31 @@ function clearFilters() {
   void loadPosts()
 }
 
-function deletePost(id: string) {
-  if (window.confirm('¿Retirar esta publicación de la comunidad?'))
-    void remove(id)
+const message = useMessage()
+const deletingId = ref<string | null>(null)
+const deleting = ref(false)
+function deletePost(id: string) { if (!deleting.value) deletingId.value = id }
+async function confirmDelete() {
+  if (!deletingId.value || deleting.value) return
+  deleting.value = true
+  try {
+    if (await remove(deletingId.value)) {
+      deletingId.value = null
+      message.success('Publicación retirada.')
+    } else message.error(error.value || 'No pudimos retirar la publicación. Intenta nuevamente.')
+  } finally { deleting.value = false }
 }
 </script>
 
 <template>
   <section class="feed-posts" aria-labelledby="feed-posts-title">
+    <MapEventRail v-if="!filtered" />
+    <NModal :show="deletingId !== null" :mask-closable="!deleting" @update:show="value => { if (!value && !deleting) deletingId = null }">
+      <NCard title="¿Retirar esta publicación?" role="dialog" aria-modal="true" aria-label="Retirar publicación" style="width:min(92vw,420px)">
+        Dejará de aparecer en el feed de tus vecinos.
+        <template #footer><div style="display:flex;justify-content:flex-end;gap:12px"><NButton :disabled="deleting" @click="deletingId = null">Cancelar</NButton><NButton type="error" :loading="deleting" @click="confirmDelete">Retirar publicación</NButton></div></template>
+      </NCard>
+    </NModal>
     <header class="feed-heading">
       <div class="feed-heading-icon"><AppIcon name="chat" :size="20" /></div>
       <div>

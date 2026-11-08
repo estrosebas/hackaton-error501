@@ -12,6 +12,7 @@ import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
 import PostPhotoGallery from './PostPhotoGallery.vue'
 import ActivityDetails from './ActivityDetails.vue'
 import ActivitiesAgenda from './ActivitiesAgenda.vue'
+import MapEventRail from '../events/MapEventRail.vue'
 import CommunityNotificationCenter from './CommunityNotificationCenter.vue'
 import NeighborProfileDetails from '../neighbors/NeighborProfileDetails.vue'
 import { useCommunity, type Post } from '../../composables/useCommunity'
@@ -84,7 +85,7 @@ function selectNeighborhood(neighborhood: string) {
           @click="selectNeighborhood(option)"
         >
           <AppIcon name="pin" /><span
-            >{{ option }}<small>Tu zona de registro</small></span
+            >{{ option }}<small>Barrio / zona · {{ currentUser?.district || 'Tu distrito de registro' }}</small></span
           ><AppIcon v-if="neighborhood === option" name="check" />
         </button>
       </div>
@@ -108,14 +109,17 @@ function selectNeighborhood(neighborhood: string) {
           :can-help="currentUser.neighbor_profile.can_help"
         />
       </div>
+      <div v-else-if="panel === 'activities'">
+      <MapEventRail agenda />
       <ActivitiesAgenda
-        v-else-if="panel === 'activities'"
+        v-if="activities.length || activitiesLoading || activitiesError"
         :activities="activities"
         :loading="activitiesLoading"
         :failed="activitiesError"
         @select="emit('selectActivity', $event)"
         @retry="loadActivities"
       />
+      </div>
       <div v-else-if="panel === 'activity'">
         <div v-if="selectedActivity" class="activity-detail">
           <button class="text-link activity-back" type="button" @click="emit('open', 'activities')">

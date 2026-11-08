@@ -37,7 +37,7 @@ class CommunityController extends Controller
             'id' => (string) $post->id, 'author_id' => $post->user_id, 'author' => $post->author->name, 'avatar' => $post->author->demoAvatarUrl(),
             'neighborhood' => $post->author->neighborhood, 'time' => $post->created_at->diffForHumans(),
             'kind' => $post->kind, 'status' => $post->status, 'owned' => $post->user_id === $request->user()->id,
-            'isWelcome' => false, 'paragraphs' => $post->body === '' ? [] : explode("\n", $post->body),
+            'isWelcome' => false, 'is_demo' => filled($post->demo_key), 'paragraphs' => $post->body === '' ? [] : explode("\n", $post->body),
             'has_photo' => $photoCount > 0, 'photo_count' => $photoCount,
             'activity' => $post->activity_starts_at ? [
                 'title' => $post->activity_title,
