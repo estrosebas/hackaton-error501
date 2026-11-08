@@ -126,11 +126,11 @@ async function confirmDelete() {
         <template #footer><div style="display:flex;justify-content:flex-end;gap:12px"><NButton :disabled="deleting" @click="deletingId = null">Cancelar</NButton><NButton type="error" :loading="deleting" @click="confirmDelete">Retirar publicación</NButton></div></template>
       </NCard>
     </NModal>
-    <header class="feed-heading">
+    <header class="feed-heading" data-tour="feed">
       <div class="feed-heading-icon"><AppIcon name="chat" :size="20" /></div>
       <div>
         <h2 id="feed-posts-title">Ayuda y comunidad</h2>
-        <p>{{currentUser?.feed_interests?.length ? 'Para ti · Gustos y publicaciones recientes de tu distrito' : 'Publicaciones de tu distrito'}}</p>
+        <p>{{currentUser?.feed_interests?.length ? 'Para ti · ' : 'Publicaciones de '}}{{currentUser?.district || 'tu distrito'}}</p>
       </div>
     </header>
     <form class="feed-search" @submit.prevent="searchFeed"><label>Palabras<input v-model="draftSearch" maxlength="100" placeholder="Ej. reparar una llanta" /></label><label>Categoría<input v-model="draftCategory" list="feed-categories" maxlength="100" placeholder="Ej. Mecánica, Música" /></label><datalist id="feed-categories"><option v-for="item in categorySuggestions" :key="item" :value="item"/></datalist><button type="submit" :disabled="loading">Buscar</button><p v-if="categoryFilter.trim()">Primero los vecinos con más vistos buenos. El respaldo es al vecino, no una certificación del servicio.</p></form><div class="feed-filters">

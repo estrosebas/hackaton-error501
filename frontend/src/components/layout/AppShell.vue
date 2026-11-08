@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from 'vue'
+import { computed, shallowRef, watch, nextTick, onBeforeUnmount } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import CommunityHeader from '../community/CommunityHeader.vue'
@@ -12,6 +12,8 @@ import { provideCommunityNotifications } from '../../composables/useCommunityNot
 import { provideProfileAvatar } from '../../composables/useProfileAvatar'
 import FeedInterestsDialog from '../profile/FeedInterestsDialog.vue'
 import { currentUser } from '../../composables/useAuth'
+import { hasSeenTour, startMasiTour, stopMasiTour, tourRunning } from '../../composables/useMasiTour'
+import AppVersionNotice from './AppVersionNotice.vue'
 
 const { neighborhood, activities } = provideCommunity()
 provideProfileAvatar()
@@ -21,6 +23,13 @@ const tabDirection = shallowRef<'forward' | 'back'>()
 const panel = shallowRef<Panel | null>(null)
 const interestsOpen = shallowRef(false)
 watch(() => currentUser.value?.id, id => { interestsOpen.value = !!id && !currentUser.value?.feed_interests_completed_at }, {immediate:true})
+watch([()=>currentUser.value?.id,()=>route.name,interestsOpen],async ([id])=>{
+  if(!id){stopMasiTour();return}
+  if(route.name!=='home'||interestsOpen.value||hasSeenTour(Number(id))||tourRunning.value)return
+  await nextTick()
+  if(route.name==='home'&&!interestsOpen.value)void startMasiTour(router)
+},{immediate:true,flush:'post'})
+onBeforeUnmount(stopMasiTour)
 const message = useMessage()
 const { unread, unreadEmergencies } = provideCommunityNotifications({
   onNewAlerts: (count) => {
@@ -96,6 +105,7 @@ watch(
         @open="openPanel"
       />
       <CommunityEmergencyBanner :count="unreadEmergencies.length" @open="openPanel('notifications')" />
+      <AppVersionNotice />
     </div>
     <main id="page-content" class="community-content" :data-tab-direction="tabDirection" tabindex="-1">
       <RouterView v-slot="{ Component }">

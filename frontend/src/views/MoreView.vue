@@ -12,6 +12,8 @@ import ProfilePage from '../components/profile/ProfilePage.vue'
 import ProfileShortcuts from '../components/profile/ProfileShortcuts.vue'
 import PrivateAccountCard from '../components/profile/PrivateAccountCard.vue'
 import FeedInterestsCard from '../components/profile/FeedInterestsCard.vue'
+import ProfileContributions from '../components/profile/ProfileContributions.vue'
+import { startMasiTour } from '../composables/useMasiTour'
 import { currentUser, logout } from '../composables/useAuth'
 import { useCommunity } from '../composables/useCommunity'
 import { fetchListings } from '../composables/useMarketplace'
@@ -35,6 +37,9 @@ watch(() => currentUser.value?.id, async (id, _, onCleanup) => {
   if (saved.status === 'fulfilled') favoriteCount.value = saved.value.total
 }, { immediate: true })
 const district = computed(() => currentUser.value?.neighborhood || neighborhood.value)
+const districtName = computed(() => currentUser.value?.district || 'Tu distrito')
+const locationLabel = computed(() => district.value===districtName.value ? district.value : `${district.value} · ${districtName.value}`)
+const buildId = import.meta.env.VITE_MASI_BUILD_ID || 'local'
 const router = useRouter()
 const signingOut = shallowRef(false)
 const message = useMessage()
@@ -55,7 +60,7 @@ async function signOut() {
 
 <template>
   <ProfilePage title="Mi perfil" description="Tu información y tus accesos en masi.">
-    <ProfileIdentity :name="currentUser?.name || 'Mi cuenta'" :district="district">
+    <ProfileIdentity :name="currentUser?.name || 'Mi cuenta'" :district="locationLabel">
       <template #avatar="{ size }"><CurrentUserAvatar :size="size" /></template>
       <template #action><ProfilePhoto /></template>
     </ProfileIdentity>
@@ -64,10 +69,13 @@ async function signOut() {
       <NeighborEndorsement v-if="currentUser" :neighbor-id="currentUser.id" :name="currentUser.name"/><ProfileEditor />
       <PrivateAccountCard />
       <FeedInterestsCard />
+      <ProfileContributions />
+      <button type="button" class="tour-replay" @click="startMasiTour(router)"><AppIcon name="map" :size="19" /> Cómo funciona masi</button>
     </template>
     <template #sidebar>
       <ProfileShortcuts
         :district="district"
+        :district-name="districtName"
         :listings="listingCount"
         :favorites="favoriteCount"
         @open-panel="emit('openPanel', $event)"
@@ -80,12 +88,14 @@ async function signOut() {
           {{ signingOut ? 'Cerrando sesión…' : 'Cerrar sesión' }}
         </button>
         <p><strong>masi.</strong> «Colega» en quechua.</p>
+        <small>Versión {{buildId.slice(0,8)}}</small>
       </footer>
     </template>
   </ProfilePage>
 </template>
 
 <style scoped>
+.tour-replay{display:flex;align-items:center;gap:10px;padding:14px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface-soft);color:var(--lavender);font:inherit;font-weight:800;cursor:pointer}
 .profile-footer {
   display: flex;
   flex-wrap: wrap;

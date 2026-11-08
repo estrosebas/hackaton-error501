@@ -12,6 +12,7 @@ defineProps<{ active?: NavSection }>()
       v-for="item in navigationItems"
       :key="item.key"
       :to="{ name: item.key }"
+      :data-tour="item.key"
       class="nav-item"
       :class="{
         'is-active': active === item.key,

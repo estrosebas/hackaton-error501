@@ -72,7 +72,21 @@ class HackathonPolishSeeder extends Seeder
                 }
                 $point = DB::selectOne('SELECT ST_AsEWKT(ST_Project(ST_SetSRID(ST_MakePoint(?, ?),4326)::geography, ?::double precision, ?::double precision)::geometry) AS location', [$anchor->longitude, $anchor->latitude, $distance, deg2rad(($seed % 36000) / 100)]);
                 $starts = $base->copy()->addMinutes(45 + $number($event->demo_key.'time') % 2040);
+                $references = ['Entrada del parque vecinal', 'Patio del local comunal', 'Jardineras del sector norte', 'Losa deportiva del barrio', 'Pasaje peatonal del sector', 'Área de juegos de la plazoleta', 'Portón del salón comunal', 'Zona de estacionamiento vecinal', 'Punto de encuentro junto a la cancha', 'Patio del taller comunitario'];
+                $changes = [];
+                $overrides = [
+                    $prefix.'event-emergency-2' => ['community', 'Taller familiar de seguridad vial'],
+                    $prefix.'range-emergency-4' => ['community', 'Taller vecinal de prevención y evacuación'],
+                    $prefix.'range-support-1' => ['trend', 'Encuentro de educación vial entre vecinos'],
+                ];
+                if (isset($overrides[$event->demo_key])) {
+                    [$category, $title] = $overrides[$event->demo_key];
+                    $types = config('map-events.categories.'.$category.'.types');
+                    $changes = ['category' => $category, 'title' => $title, 'type' => $types[array_key_last($types)], 'points' => config('map-events.categories.'.$category.'.points')];
+                }
                 DB::table('map_events')->where('id', $event->id)->update([
+                    ...$changes,
+                    'place' => 'DEMO · '.$references[$seed % count($references)].' · '.($anchor->neighborhood ?: $anchor->district),
                     'location' => DB::raw("ST_GeogFromText('".$point->location."')"), 'starts_at' => $starts,
                     'ends_at' => $starts->copy()->addMinutes(60 + $seed % 161),
                 ]);

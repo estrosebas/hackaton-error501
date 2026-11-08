@@ -47,7 +47,7 @@ class MapEventsTest extends TestCase
     {
         $this->getJson('/api/v1/map-events/catalog')->assertUnauthorized();
         Sanctum::actingAs($this->neighbor());
-        $this->getJson('/api/v1/map-events/catalog')->assertOk()->assertJsonPath('points', 0)->assertJsonCount(4, 'categories')->assertJsonCount(5, 'frames')->assertJsonPath('frames.0.unlocked', false);
+        $this->getJson('/api/v1/map-events/catalog')->assertOk()->assertJsonPath('points', 0)->assertJsonPath('attendances', 0)->assertJsonCount(4, 'categories')->assertJsonCount(5, 'frames')->assertJsonPath('frames.0.unlocked', false);
         $this->createEvent(['points' => 1000]);
         $this->getJson('/api/v1/map-events/catalog')->assertJsonPath('points', 0);
         $this->getJson('/api/v1/map-events')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.points', 2)->assertJsonPath('data.0.latitude', -12.0464)->assertJsonMissingPath('data.0.location')->assertJsonMissingPath('data.0.photo_path');

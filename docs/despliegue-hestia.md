@@ -1,5 +1,7 @@
 # Despliegue web en Hestia
 
+Al compilar, establecer `MASI_BUILD_ID` al SHA de la versión desplegada. Vite publica `build/version.json`; el perfil muestra el identificador y la app ofrece actualizar cuando detecta otra versión, sin recargar automáticamente formularios abiertos. Servir ese JSON y `index.html` sin caché. El frontend de la VPS es una copia desplegada y no necesita `.git` propio.
+
 Frontend: `https://masi.nooxtools.me`. API: `https://api.masi.nooxtools.me/api/v1`.
 
 ## Directorios

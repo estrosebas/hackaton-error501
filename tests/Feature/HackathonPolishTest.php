@@ -46,6 +46,9 @@ class HackathonPolishTest extends TestCase
         $this->assertCount(2, $activities->pluck('activity_starts_at')->unique());
         $this->assertCount(2, $activities->pluck('photo_path')->unique());
         $this->assertDatabaseCount('empathy_rewards', 0);
+        $this->assertGreaterThan(3, DB::table('map_events')->distinct()->count('place'));
+        $counts = DB::table('map_events')->selectRaw('category,count(*) AS total')->groupBy('category')->pluck('total');
+        $this->assertGreaterThan(1, $counts->unique()->count());
         CommunityPost::create(['user_id' => $anchor->id, 'ubigeo' => $anchor->ubigeo, 'kind' => 'moment', 'body' => 'Una publicación más nueva que el simulacro']);
         Sanctum::actingAs($anchor);
         $this->getJson('/api/v1/feed')->assertOk()->assertJsonPath('data.0.kind', 'emergency')->assertJsonPath('data.0.is_demo', true)->assertJsonPath('data.0.status', 'resolved');

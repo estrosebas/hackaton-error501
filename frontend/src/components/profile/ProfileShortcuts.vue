@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import AppIcon, { type IconName } from '../AppIcon.vue'
 
-const props = defineProps<{ district: string; listings?: number; favorites?: number }>()
+const props = defineProps<{ district: string; districtName?:string; listings?: number; favorites?: number }>()
 const emit = defineEmits<{ openPanel: [panel: 'activities' | 'neighborhood'] }>()
 
 type Shortcut = { icon: IconName; label: string; detail: string } & (
@@ -27,6 +27,7 @@ const groups = computed<{ title: string; items: Shortcut[] }[]>(() => [
         detail: props.district,
         panel: 'neighborhood',
       },
+      { icon: 'pin', label: 'Distrito', detail: props.districtName || 'Tu distrito de registro', panel: 'neighborhood' },
     ],
   },
   {

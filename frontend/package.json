@@ -28,6 +28,7 @@
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.4",
     "@mediapipe/tasks-vision": "^1.0.1",
+    "driver.js": "^1.10.2",
     "leaflet": "^1.9.4",
     "naive-ui": "^2.45.3",
     "onnxruntime-web": "^1.25.1",

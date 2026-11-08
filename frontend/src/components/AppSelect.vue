@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { NSelect } from 'naive-ui'
+function hideDecorativeSuffix(element: HTMLElement) {
+  // Naive labels the arrow wrapper "loading" even when its spinner is inactive.
+  element.querySelectorAll('.n-base-suffix[aria-label="loading"]').forEach(node => {
+    node.removeAttribute('aria-label')
+    node.setAttribute('aria-hidden', 'true')
+  })
+}
+const vDecorativeSuffix = { mounted: hideDecorativeSuffix, updated: hideDecorativeSuffix }
 
 defineProps<{
   options: { label: string; value: string }[]
@@ -13,6 +21,7 @@ const value = defineModel<string | null>('value', { required: true })
 
 <template>
   <NSelect
+    v-decorative-suffix
     v-model:value="value"
     :options="options"
     :placeholder="placeholder"

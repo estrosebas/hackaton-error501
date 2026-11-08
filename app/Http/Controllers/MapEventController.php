@@ -57,6 +57,7 @@ class MapEventController extends Controller
         $points = (int) DB::table('empathy_rewards')->where('user_id', $request->user()->id)->sum('points');
 
         return response()->json(['points' => $points,
+            'attendances' => DB::table('map_event_attendances')->where('user_id', $request->user()->id)->whereNotNull('processed_at')->count(),
             'categories' => collect(config('map-events.categories'))->map(fn ($item, $id) => ['id' => $id, ...$item])->values(),
             'frames' => collect(config('map-events.frames'))->map(fn ($item, $id) => ['id' => $id, ...$item, 'unlocked' => $points >= $item['points']])->values(),
         ])->header('Cache-Control', 'no-store');

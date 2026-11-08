@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { postKinds, type Post } from '../../composables/useCommunity'
 import AppIcon from '../AppIcon.vue'
 import ActivityDetails from './ActivityDetails.vue'
+import { currentUser } from '../../composables/useAuth'
 
 const props = defineProps<{ post: Post }>()
 const kind = computed(() => postKinds.find(item => item.value === props.post.kind)?.label)
@@ -12,7 +13,7 @@ const kind = computed(() => postKinds.find(item => item.value === props.post.kin
   <div class="post-caption">
     <div v-if="kind || post.status === 'resolved'" class="post-labels">
       <span v-if="post.recommended" class="post-kind">♡ Para ti</span>
-      <span v-if="post.trending" class="post-kind">↗ En tendencia en tu distrito</span>
+      <span v-if="post.trending" class="post-kind">↗ En tendencia en {{currentUser?.district || 'tu distrito'}}</span>
       <span v-if="kind" class="post-kind" :class="{'post-kind--emergency':post.kind==='emergency'}">{{ kind }}</span>
       <span v-if="post.status === 'resolved'" class="post-resolved">
         <AppIcon name="check" :size="14" />

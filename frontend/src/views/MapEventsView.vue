@@ -117,7 +117,7 @@ async function locate(manual?:MapEvent){
     const candidates=manual?[manual]:events.value.filter(event=>!event.is_owner&&event.joined&&!event.attended&&Date.parse(event.starts_at)<=now&&Date.parse(event.ends_at)+60000>=now)
     for(const event of candidates){
       if(location.accuracy > 100) continue
-      try{await action(event,'check-in',location);notice.value=`Asistencia registrada · +${event.points} puntos de empatía.`}catch(e){if(manual)throw e}
+      try{await action(event,'check-in',location);notice.value=event.points?`Asistencia registrada · +${event.points} puntos de empatía.`:'Asistencia registrada · el apoyo con costo no suma puntos.'}catch(e){if(manual)throw e}
     }
     if(!candidates.length)notice.value='Ubicación activada. Se verificará tu asistencia a eventos inscritos mientras este mapa esté abierto.'
   }catch(e){actionError.value=e instanceof Error?e.message:'Activa el permiso de ubicación para validar tu asistencia.'}finally{busy.value=false}
@@ -462,7 +462,7 @@ onBeforeUnmount(()=>clearInterval(timer))
             <strong>{{ event.title }}</strong>
             <small>{{ date(event.starts_at) }} · {{ event.place }} <strong v-if="formatDistance(event)" class="neighbor-distance-tag">· {{ formatDistance(event) }}</strong></small>
             <span class="neighbor-result-meta">
-              {{ categoryOf(event)?.label }} · +{{ event.points }} P
+              {{ categoryOf(event)?.label }} · {{event.points ? `+${event.points} P` : 'Sin puntos · apoyo con costo'}}
               <span v-if="event.is_owner" class="neighbor-can-help">Tu evento</span>
               <span v-else-if="event.joined" class="neighbor-can-help">{{ event.attended ? 'Asististe' : 'Inscrito' }}</span>
             </span>
@@ -501,7 +501,7 @@ onBeforeUnmount(()=>clearInterval(timer))
           <div class="event-chips-strip">
             <span class="event-chip chip-points">
               <AppIcon name="heart" :size="13" />
-              +{{ active.points }} P empatía
+              {{active.points ? `+${active.points} P empatía` : 'Sin puntos · apoyo con costo'}}
             </span>
             <span class="event-chip chip-cost">
               {{ active.has_cost ? 'Con costo' : 'Sin costo' }}
@@ -561,7 +561,7 @@ onBeforeUnmount(()=>clearInterval(timer))
               <span class="alert-icon">✓</span>
               <div class="alert-body">
                 <strong>Asistencia confirmada</strong>
-                <p>¡Gracias por participar! Se acreditaron +{{ active.points }} puntos de empatía a tu perfil.</p>
+                <p>{{active.points ? `¡Gracias por participar! Se acreditaron +${active.points} puntos de empatía a tu perfil.` : 'Asistencia validada. El apoyo con costo no otorga puntos de empatía.'}}</p>
               </div>
             </div>
 
@@ -618,7 +618,7 @@ onBeforeUnmount(()=>clearInterval(timer))
               <span class="alert-icon">✨</span>
               <div class="alert-body">
                 <strong>Tu evento está en curso</strong>
-                <p>Finaliza a las {{ formatTime(active.ends_at) }}. Los asistentes inscritos sumarán +{{ active.points }} puntos de empatía.</p>
+                <p>Finaliza a las {{ formatTime(active.ends_at) }}. {{active.points ? `Los asistentes inscritos sumarán +${active.points} puntos al validar asistencia.` : 'Este apoyo con costo no otorga puntos de empatía.'}}</p>
               </div>
             </div>
           </template>
