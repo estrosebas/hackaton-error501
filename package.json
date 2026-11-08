@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/check-face-accessories.mjs && vite build",
+    "dev": "vite",
+    "test:face": "node --test tests/js/*.test.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.28",
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "onnxruntime-web": "1.25.1",
+    "axios": "^1.13.5"
+  },
+  "devDependencies": {
+    "vite": "^6.0.11",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "laravel-vite-plugin": "^1.2.0",
+    "concurrently": "^9.0.1"
+  }
+}

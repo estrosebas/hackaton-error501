@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Vecino</string>
+    <string name="title_activity_main">Vecino</string>
+    <string name="package_name">com.error501.vecino</string>
+    <string name="custom_url_scheme">com.error501.vecino</string>
+    <string name="capacitor_background_geolocation_notification_channel_name">Ubicación de eventos</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_tracking</string>
+    <string name="capacitor_background_geolocation_notification_color">#ff617e</string>
+</resources>

@@ -1,0 +1,11 @@
+{
+  "runtime": "onnxruntime-web@1.25.1",
+  "framefind_commit": "3c69676cbcd44a47ab083b541b56c050dbc0b1b5",
+  "files": {
+    "models/glasses.onnx": "66f75c686974a04bf956d0ed6411315309afcabd36c400edec743953adafccb9",
+    "models/mask.onnx": "9a939efa49e602e7aab867980118f9ae826c3eda305ea57e6d13f534f80d2b1e",
+    "models/face_landmarker.task": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+    "ort-1.25.1/ort-wasm-simd-threaded.mjs": "ad9ee5889344e212b8b83daf778fc75bc3a2293ca640ab5e54f756a25cef1fa6",
+    "ort-1.25.1/ort-wasm-simd-threaded.wasm": "3cbf90f74a919ff82acd1c0171ff40d1170d928e9634a430e9f3fa6f35674464"
+  }
+}

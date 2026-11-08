@@ -1,0 +1,137 @@
+import { shallowRef } from 'vue'
+import { connectionOffline } from '../native/connectivity'
+import { api, ApiError, clearSession, saveSession } from '../services/api'
+
+export interface NeighborProfile {
+  bio: string | null
+  skills: string[]
+  interests: string[]
+  availability: string | null
+  can_help: boolean
+}
+export interface AuthUser {
+  id: number
+  name: string
+  neighborhood: string | null
+  email: string
+  latitude?: number | string | null
+  longitude?: number | string | null
+  ubigeo?: string | null
+  district?: string | null
+  region?: string | null
+  province?: string | null
+  phone?: string | null
+  feed_interests?: string[] | null
+  feed_interests_completed_at?: string | null
+  neighbor_profile?: Partial<NeighborProfile> | null
+}
+export const currentUser = shallowRef<AuthUser | null>(null)
+export const sessionError = shallowRef('')
+let pending: { token: string; request: Promise<boolean> } | null = null
+let expiration: ReturnType<typeof setTimeout> | undefined
+let verifiedToken: string | null = null
+let verifiedUntil = 0
+function ended() {
+  verifiedToken = null
+  verifiedUntil = 0
+  currentUser.value = null
+  clearTimeout(expiration)
+}
+window.addEventListener('masi:session-ended', ended)
+if (import.meta.hot) import.meta.hot.dispose(() => { clearTimeout(expiration); window.removeEventListener('masi:session-ended', ended) })
+
+export async function validateSession(): Promise<boolean> {
+  const token = sessionStorage.getItem('masi.api.token')
+  if (!token) { currentUser.value = null; return false }
+  if (token === verifiedToken && verifiedUntil > 0 && Date.now() >= verifiedUntil) { clearSession(); return false }
+  if (pending?.token === token) return pending.request
+  const request = (async () => {
+    try {
+      const result = await api<{ user: AuthUser; expires_at: string | null }>('/profile', { cache: 'no-store', signal: AbortSignal.timeout(8000) })
+      if (sessionStorage.getItem('masi.api.token') !== token) return false
+      currentUser.value = result.user
+      verifiedToken = token
+      verifiedUntil = result.expires_at ? Date.parse(result.expires_at) : 0
+      sessionStorage.setItem('masi.api.user', JSON.stringify(result.user))
+      sessionError.value = ''
+      clearTimeout(expiration)
+      if (result.expires_at) {
+        const remaining = Date.parse(result.expires_at) - Date.now()
+        if (remaining <= 0) { clearSession(); return false }
+        expiration = setTimeout(() => {
+          // Long-lived tokens can exceed the browser's maximum timeout.
+          if (sessionStorage.getItem('masi.api.token') === token) void validateSession()
+        }, Math.min(remaining + 50, 2_147_000_000))
+      }
+      return true
+    } catch (error) {
+      // Read-only offline use only for a session already verified in this runtime,
+      // and never beyond the expiry reported by Laravel. No offline cold login.
+      if (error instanceof ApiError && error.status === 0 && connectionOffline && token === verifiedToken && sessionStorage.getItem('masi.api.token') === token && currentUser.value && Date.now() < verifiedUntil) return true
+      if (sessionStorage.getItem('masi.api.token') === token || (!sessionStorage.getItem('masi.api.token') && error instanceof ApiError && error.status === 401)) {
+        currentUser.value = null
+        sessionError.value = error instanceof ApiError && error.status === 401
+          ? 'Tu sesión venció. Inicia sesión nuevamente.'
+          : 'No pudimos verificar tu sesión. Revisa tu conexión e intenta nuevamente.'
+      }
+      return false
+    }
+  })()
+  pending = { token, request }
+  try { return await request } finally { if (pending?.request === request) pending = null }
+}
+
+export async function login(credentials: { dni: string; password: string }) {
+  const result = await api<{ token: string; user: AuthUser }>('/auth/login', { method: 'POST', body: JSON.stringify(credentials) })
+  saveSession(result.token, result.user)
+  currentUser.value = result.user
+  sessionError.value = ''
+}
+
+export async function updateNeighborProfile(changes: Partial<NeighborProfile>) {
+  const token = sessionStorage.getItem('masi.api.token')
+  const userId = currentUser.value?.id
+  if (!token || userId === undefined) return false
+
+  const { data } = await api<{ data: Partial<NeighborProfile> }>('/profile/presentation', {
+    method: 'PATCH',
+    body: JSON.stringify({ neighbor_profile: changes }),
+  })
+  // A session check already in flight may have read the old profile.
+  if (pending?.token === token) await pending.request
+
+  if (sessionStorage.getItem('masi.api.token') !== token || currentUser.value?.id !== userId) return false
+  const user = { ...currentUser.value, neighbor_profile: data }
+  currentUser.value = user
+  saveSession(token, user)
+  return true
+}
+
+export async function refreshAccount() {
+  if (pending) await pending.request
+  return validateSession()
+}
+
+export async function updateFeedInterests(interests: string[]) {
+  const token = sessionStorage.getItem('masi.api.token')
+  const id = currentUser.value?.id
+  const { data } = await api<{data: Pick<AuthUser, 'feed_interests' | 'feed_interests_completed_at'>}>('/profile/interests', {method:'PUT',body:JSON.stringify({interests})})
+  if (pending?.token === token) await pending.request
+  if (!token || sessionStorage.getItem('masi.api.token') !== token || currentUser.value?.id !== id) return false
+  const user = {...currentUser.value!,...data}
+  currentUser.value = user
+  saveSession(token,user)
+  return true
+}
+
+export async function logout() {
+  try {
+    if (sessionStorage.getItem('masi.api.token')) await api('/auth/logout', { method: 'POST' })
+  } catch (error) {
+    // An expired/revoked token is already logged out. Other failures must remain
+    // visible so the user can retry server revocation instead of a false success.
+    if (!(error instanceof ApiError) || error.status !== 401) throw error
+  }
+  sessionError.value = ''
+  clearSession()
+}
