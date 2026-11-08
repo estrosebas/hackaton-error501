@@ -1,0 +1,115 @@
+{
+  "description": "Fotografías ilustrativas de espacios y actividades para eventos ficticios. No representan el lugar real de las coordenadas ni emergencias actuales.",
+  "license": "Pexels License",
+  "license_url": "https://www.pexels.com/license/",
+  "images": [
+    {
+      "key": "community-0",
+      "file": "community-0.jpg",
+      "id": 9392837,
+      "author": "Luke Seago",
+      "source": "https://www.pexels.com/photo/burning-griller-9392837/",
+      "alt": "Parrilla al aire libre para una pollada solidaria",
+      "sha256": "51f313c1239ff3e74c1b12ecf6786e06e9288a5784ac3f885caa3676ff65f65d"
+    },
+    {
+      "key": "community-1",
+      "file": "community-1.jpg",
+      "id": 17671715,
+      "author": "JUNICHI NAGAMI",
+      "source": "https://www.pexels.com/photo/empty-bench-in-a-park-17671715/",
+      "alt": "Parque y áreas verdes para una jornada de voluntariado",
+      "sha256": "61a5143e2cefdbda8dc8f521868bd1bf46d856a604872f4b427b377396c574ea"
+    },
+    {
+      "key": "community-2",
+      "file": "community-2.jpg",
+      "id": 8761311,
+      "author": "Pavel Danilyuk",
+      "source": "https://www.pexels.com/photo/empty-seats-inside-a-conference-room-8761311/",
+      "alt": "Salón con sillas para un encuentro de vecinos",
+      "sha256": "1798675dffb71a00b9476f987d9c01f9ec63d649489ab1c73507c4cafd81b0a2"
+    },
+    {
+      "key": "emergency-0",
+      "file": "emergency-0.jpg",
+      "id": 13865772,
+      "author": "Connor Scott McManus",
+      "source": "https://www.pexels.com/photo/barriers-on-a-flooded-street-13865772/",
+      "alt": "Calle inundada, referencia para un simulacro de preparación",
+      "sha256": "014d1dd66dce128a18b8af02eff0566549b9f2fd578d0063863bf7b2aaebf343"
+    },
+    {
+      "key": "emergency-1",
+      "file": "emergency-1.jpg",
+      "id": 4090002,
+      "author": "Natalie Bond",
+      "source": "https://www.pexels.com/photo/fire-trucks-at-fire-station-4090002/",
+      "alt": "Estación y vehículos de bomberos para un simulacro",
+      "sha256": "17a8eec4b6dbf6bb67939f768e49c5b1a028f24a0c416cae62bd8e13c2cde17d"
+    },
+    {
+      "key": "emergency-2",
+      "file": "emergency-2.jpg",
+      "id": 5505120,
+      "author": "Mike van Schoonderwalt",
+      "source": "https://www.pexels.com/photo/traffic-cones-in-row-on-road-edge-5505120/",
+      "alt": "Calle señalizada con conos para practicar seguridad vial",
+      "sha256": "9c9fa6aa6b2576c6ee398cd46c121ad5aa1f8fa5b66172ec58eb9634654138a2"
+    },
+    {
+      "key": "trend-0",
+      "file": "trend-0.jpg",
+      "id": 31542346,
+      "author": "Saliha Büyükkaya Gülhan",
+      "source": "https://www.pexels.com/photo/two-cups-of-hot-chocolate-on-wooden-table-31542346/",
+      "alt": "Mesa con chocolate caliente para una chocolatada",
+      "sha256": "eb86ed403693c2f28035e7d455d678d2280a4f5d51519e1aebbe3826c440b405"
+    },
+    {
+      "key": "trend-1",
+      "file": "trend-1.jpg",
+      "id": 27177109,
+      "author": "Helena Lopes",
+      "source": "https://www.pexels.com/photo/table-with-birthday-confection-27177109/",
+      "alt": "Espacio decorado con una mesa de cumpleaños",
+      "sha256": "de0f4e96f2517de58e0156b09e6fb08ac6428dd545c8276d54971bcf6f944329"
+    },
+    {
+      "key": "trend-2",
+      "file": "trend-2.jpg",
+      "id": 23894011,
+      "author": "Oleksandr Plakhota",
+      "source": "https://www.pexels.com/photo/giant-chess-pieces-standing-in-a-park-23894011/",
+      "alt": "Zona de ajedrez al aire libre en un parque",
+      "sha256": "a17acfc1d5a458dc3609d26cb4c64f26374ffd6527a66b9d50038bc1d01862a9"
+    },
+    {
+      "key": "support-0",
+      "file": "support-0.jpg",
+      "id": 4246119,
+      "author": "Ketut Subiyanto",
+      "source": "https://www.pexels.com/photo/empty-apartment-with-packed-carton-boxes-before-moving-4246119/",
+      "alt": "Vivienda con cajas preparadas para una mudanza",
+      "sha256": "dccbc63583188dff5d223337b4c1b8477c8fff50ac12d6569012bd461cd13ca7"
+    },
+    {
+      "key": "support-1",
+      "file": "support-1.jpg",
+      "id": 18946266,
+      "author": "Mak_ jp",
+      "source": "https://www.pexels.com/photo/corner-of-parking-lot-18946266/",
+      "alt": "Espacio abierto de estacionamiento para una práctica de conducción",
+      "sha256": "00982eb26f5c206f7283edf6e813f87b7eb2aee9127ef6dfd158fbaa1c65608b"
+    },
+    {
+      "key": "support-2",
+      "file": "support-2.jpg",
+      "id": 37368171,
+      "author": "Jonathan Borba",
+      "source": "https://www.pexels.com/photo/close-up-of-computer-motherboard-with-cpu-and-ssd-37368171/",
+      "alt": "Equipo informático como referencia de reparación de computadoras",
+      "sha256": "df5b999e36123c6926ff98518e23f46ff64bbe661216737db5f5ec8bd1f1f5df"
+    }
+  ]
+}

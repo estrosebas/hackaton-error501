@@ -78,11 +78,11 @@ function render(){
     if(frame){element.style.outline=`4px ${frame.style} ${frame.color}`;element.style.outlineOffset='3px'}
     const glyph=document.createElement('span');glyph.textContent=category?.emoji||'📍';element.append(glyph)
     void setMarkerPhoto(event, element, version)
-    const badge=document.createElement('div');badge.className='event-map-badge'
-    const label=document.createElement('span');label.className='neighbor-pin-name event-pin-title';label.textContent=event.title;badge.append(element,label)
+    const badge=document.createElement('div');badge.className=event.category==='emergency'?'event-map-badge event-map-badge--emergency':'event-map-badge'
+    const label=document.createElement('span');label.className='neighbor-pin-name event-pin-title';label.textContent=(event.category==='emergency'?'🚨 ':'')+event.title;badge.append(element,label)
     const marker=L.marker([event.latitude,event.longitude],{icon:L.divIcon({html:badge,className:'event-map-pin',iconSize:[62,74],iconAnchor:[31,26]}),title:`${event.title} · ${category?.label}`,keyboard:true}).addTo(layer)
     marker.on('click',()=>emit('select',event.id));marker.getElement()?.setAttribute('aria-label',`Ver evento: ${event.title}`)
-    if(event.id===props.selected)marker.setZIndexOffset(1000)
+    marker.setZIndexOffset(event.id===props.selected?1000:event.category==='emergency'?500:0)
   }
 }
 function updateRadarPlayback() {
@@ -204,6 +204,19 @@ onBeforeUnmount(() => {
 .event-map-face span { font-size: 25px; }
 .leaflet-container .event-map-pin .event-map-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .event-map-pin:focus-visible .event-map-face { box-shadow: 0 0 0 3px var(--text); }
+.event-map-badge--emergency .event-map-face {
+  border-color: #ff617e !important;
+  border-width: 5px;
+  box-shadow: 0 0 0 5px #ff617e45, 0 0 20px #ff617e60, 0 4px 12px #0009;
+}
+.event-map-badge--emergency .event-pin-title {
+  color: #fff0f3;
+  background: #932a45;
+  border: 1px solid #ff617e;
+}
+.event-map-pin:focus-visible .event-map-badge--emergency .event-map-face {
+  box-shadow: 0 0 0 3px #fff, 0 0 0 7px #ff617e80;
+}
 .event-location-marker { color: var(--coral-strong); filter: drop-shadow(0 3px 5px #0008); }
 .event-map-canvas .leaflet-tile-pane { filter: invert(1) hue-rotate(178deg) saturate(.48) brightness(.78) contrast(.94); }
 .event-map-canvas .leaflet-control-attribution { padding: 2px 6px; color: var(--muted); background: var(--surface); font-size: 10px; }

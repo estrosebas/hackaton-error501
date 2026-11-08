@@ -69,7 +69,8 @@ async function toggleComments(focus: boolean) {
 </script>
 
 <template>
-  <article class="neighbor-post" :aria-label="`Publicación de ${post.author}`">
+  <article class="neighbor-post" :class="{'neighbor-post--emergency':post.kind==='emergency'}" :aria-label="`${post.kind==='emergency'?'Emergencia':'Publicación'} de ${post.author}`">
+    <div v-if="post.kind==='emergency'" class="post-emergency-banner"><span aria-hidden="true">🚨</span>{{post.status==='resolved'?'Emergencia atendida':'Emergencia vecinal'}}</div>
     <header class="post-heading">
       <NeighborLink :id="post.author_id" :name="post.author">
         <CurrentUserAvatar
@@ -197,6 +198,26 @@ async function toggleComments(focus: boolean) {
   padding-bottom: 15px;
   border-top: 1px solid var(--line);
   background: var(--surface);
+}
+.neighbor-post--emergency {
+  margin-block: 10px;
+  border: 2px solid #ff617e;
+  border-left-width: 5px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ff617e0d, transparent 65%), var(--surface);
+  box-shadow: 0 0 0 3px #ff617e12;
+  overflow: hidden;
+}
+.post-emergency-banner {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px var(--local-gutter);
+  border-bottom: 1px solid #ff617e55;
+  color: #ff9cb0;
+  background: #ff617e1a;
+  font-size: 0.75rem;
+  font-weight: 900;
 }
 .post-heading,
 .post-footer,
