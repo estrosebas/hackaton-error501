@@ -12,9 +12,22 @@ class NeighborController extends Controller
 {
     public function index(Request $request, NeighborConnections $connections)
     {
-        $data = $request->validate(['q' => ['nullable', 'string', 'max:100']]);
-        abort_unless($request->user()->ubigeo, 422, 'Completa tu distrito.');
-        $items = User::where('ubigeo', $request->user()->ubigeo)->where('id', '!=', $request->user()->id)
+        $data = $request->validate(['q' => ['nullable', 'string', 'max:100'], 'nearby' => ['sometimes', 'boolean']]);
+        $viewer = $request->user();
+        abort_unless($viewer->ubigeo, 422, 'Completa tu distrito.');
+
+        if ($request->boolean('nearby')) {
+            $neighborhood = trim($viewer->neighborhood ?? '');
+            $nearby = $neighborhood === '' ? collect() : $connections->visibleNeighbors($viewer)
+                ->whereRaw('LOWER(TRIM(neighborhood)) = LOWER(?)', [$neighborhood])
+                ->orderBy('name')->orderBy('id')->limit(5)->get();
+
+            return response()->json(['data' => $nearby->map(fn (User $user) => [
+                ...$connections->profile($user), 'has_community_avatar' => filled($user->community_avatar_path),
+            ])]);
+        }
+
+        $items = User::where('ubigeo', $viewer->ubigeo)->where('id', '!=', $viewer->id)
             ->when($data['q'] ?? '', fn ($q, $term) => $q->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($term).'%']))
             ->orderBy('name')->limit(50)->get();
 

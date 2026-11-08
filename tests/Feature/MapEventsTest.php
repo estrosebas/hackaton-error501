@@ -120,6 +120,8 @@ class MapEventsTest extends TestCase
         $event = $this->post('/api/v1/map-events', $this->payload(['has_cost' => '0', 'photo' => UploadedFile::fake()->image('park.jpg', 300, 300)]), ['Accept' => 'application/json'])->assertCreated()->json('data');
         $id = $event['id'];
         $this->assertTrue($event['has_photo']);
+        $this->assertFalse($event['author']['has_community_avatar']);
+        $this->post('/api/v1/profile/community-avatar', ['photo' => UploadedFile::fake()->image('avatar.jpg')])->assertNoContent();
         $this->getJson("/api/v1/map-events/$id/photo")->assertOk()->assertHeader('Content-Type', 'image/webp');
         Sanctum::actingAs($this->neighbor(['ubigeo' => '080101']));
         $this->getJson('/api/v1/map-events')->assertJsonCount(0, 'data');
@@ -127,9 +129,13 @@ class MapEventsTest extends TestCase
         $this->postJson("/api/v1/map-events/$id/join")->assertNotFound();
         $participant = $this->neighbor();
         Sanctum::actingAs($participant);
+        $this->getJson('/api/v1/map-events')->assertOk()->assertJsonPath('data.0.author.has_community_avatar', true)
+            ->assertJsonPath('data.0.author.avatar', '')->assertJsonMissingPath('data.0.author.community_avatar_path');
+        $this->getJson('/api/v1/neighbors/'.$owner->id.'/community-avatar')->assertOk()->assertHeader('Content-Type', 'image/webp');
         $this->postJson("/api/v1/map-events/$id/cancel")->assertForbidden();
         DB::table('neighbor_blocks')->insert(['user_id' => $owner->id, 'blocked_user_id' => $participant->id]);
         $this->getJson('/api/v1/map-events')->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/neighbors/'.$owner->id.'/community-avatar')->assertNotFound();
         $this->postJson("/api/v1/map-events/$id/join")->assertNotFound();
         Sanctum::actingAs($owner);
         $this->postJson("/api/v1/map-events/$id/cancel")->assertNoContent();

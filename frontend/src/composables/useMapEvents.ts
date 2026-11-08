@@ -5,7 +5,7 @@ import { api } from '../services/api'
 
 export interface MapCategory { id:string; label:string; emoji:string; color:string; points:number; examples:string;types:string[] }
 export interface EventFrame { id:string; label:string; points:number; color:string; style:string; unlocked:boolean }
-export interface MapEvent { id:number;title:string;description:string;category:string;type:string|null;place:string;starts_at:string;ends_at:string;latitude:number;longitude:number;has_cost:boolean;points:number;frame:string|null;has_photo:boolean;author:{id:number;name:string};is_owner:boolean;joined:boolean;attended:boolean;participants:number;cancelled:boolean }
+export interface MapEvent { id:number;title:string;description:string;category:string;type:string|null;place:string;starts_at:string;ends_at:string;latitude:number;longitude:number;has_cost:boolean;points:number;frame:string|null;has_photo:boolean;author:{id:number;name:string;avatar?:string;has_community_avatar?:boolean};is_owner:boolean;joined:boolean;attended:boolean;participants:number;cancelled:boolean }
 export interface MapCatalog { points:number;categories:MapCategory[];frames:EventFrame[] }
 export async function currentPosition(){
   if(Capacitor.isNativePlatform())await Geolocation.requestPermissions()

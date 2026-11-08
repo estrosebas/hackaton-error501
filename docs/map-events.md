@@ -12,7 +12,7 @@ El botón central abre `/mapa/crear`. «Publicar» en Inicio conserva `/publicar
 | Apoyo sin costo | 1 |
 | Apoyo con costo | 0 |
 
-Crear e inscribirse no otorgan puntos. El servidor fija el valor al crear; el cliente no puede elegirlo. Cada evento tiene horario de inicio/fin (hasta 48 horas), tipo, referencia y punto elegido con GPS, pin o coordenadas. El distrito se toma de la cuenta. Una foto es opcional y se recodifica como WebP sin EXIF; si falta, el marcador usa el símbolo de la categoría. La foto del evento se comparte explícitamente con el distrito y no reutiliza la biometría privada.
+Crear e inscribirse no otorgan puntos. El servidor fija el valor al crear; el cliente no puede elegirlo. Cada evento tiene horario de inicio/fin (hasta 48 horas), tipo, referencia y punto elegido con GPS, pin o coordenadas. El distrito se toma de la cuenta. La foto opcional del evento se comparte con el distrito y se recodifica como WebP sin EXIF. El marcador muestra esa foto, luego el avatar comunitario del autor (o el retrato sintético en local) y, si no hay imagen disponible, el símbolo de la categoría.
 
 Para registrar asistencia es necesario estar inscrito, dentro del horario, sin cancelación, con una captura posterior a la inscripción y de los últimos dos minutos. Se exige precisión declarada de hasta 100 m y `ST_DWithin` sobre `geography(Point,4326)` a un máximo de 100 m del evento. No se suma la precisión al radio permitido. Las coordenadas de asistencia no se guardan ni se muestran; solo la distancia verificada y la hora. Las coordenadas del evento sí son públicas dentro del distrito.
 

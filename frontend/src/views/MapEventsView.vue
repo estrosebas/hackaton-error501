@@ -6,6 +6,7 @@ import {latLng} from 'leaflet'
 import AppIcon from '../components/AppIcon.vue'
 import '../components/neighbors/nearby-neighbors.css'
 import CommunityEventMap from '../components/events/CommunityEventMap.vue'
+import MapNeighborhoodAvatars from '../components/events/MapNeighborhoodAvatars.vue'
 import {useMapEvents,currentPosition,type MapEvent} from '../composables/useMapEvents'
 import {currentUser} from '../composables/useAuth'
 const {events,catalog,error,loading,hasMore,load,action}=useMapEvents()
@@ -43,7 +44,13 @@ onBeforeUnmount(()=>clearInterval(timer))
         </div>
       </div>
       <div class="neighbor-search-row"><NInput v-model:value="search" clearable placeholder="Buscar eventos" :input-props="{'aria-label':'Buscar eventos por nombre o lugar'}"><template #prefix><AppIcon name="search" :size="17"/></template></NInput><NSelect v-model:value="radius" class="neighbor-radius" :options="radiusOptions" aria-label="Distancia máxima"/></div>
-      <div class="neighbor-filter-chips event-category-chips" role="group" aria-label="Tipos de eventos"><button type="button" :aria-pressed="!category" :class="{selected:!category}" @click="category=''">Todos</button><button v-for="item in catalog.categories" :key="item.id" type="button" :aria-pressed="category===item.id" :class="{selected:category===item.id}" @click="category=item.id">{{item.emoji}} {{item.label}}</button></div>
+      <div class="neighbor-filter-chips event-category-chips" role="group" aria-label="Tipos de eventos">
+        <button type="button" :aria-pressed="!category" :class="{ selected: !category }" @click="category = ''">Todos</button>
+        <button v-for="item in catalog.categories" :key="item.id" type="button" :aria-pressed="category === item.id" :class="{ selected: category === item.id }" @click="category = item.id">
+          <span aria-hidden="true">{{ item.emoji }}</span>{{ item.id === 'community' ? 'Comunitarios' : item.label }}
+        </button>
+      </div>
+      <MapNeighborhoodAvatars v-if="mode === 'map'" />
     </header>
     <p v-if="error||actionError" role="alert" class="map-feedback">{{error||actionError}}</p><p v-if="notice" role="status" class="map-feedback">{{notice}}</p>
     <div v-if="mode==='map'" class="neighbor-map-stage">
@@ -67,5 +74,8 @@ onBeforeUnmount(()=>clearInterval(timer))
   </section>
 </template>
 <style scoped>
-.community-events-explorer{margin:0;max-width:none}.event-category-chips{flex-wrap:nowrap;overflow:auto;padding-bottom:2px}.event-category-chips button{flex-shrink:0}.map-zone-button{cursor:pointer;font-family:inherit}.map-feedback{padding:8px 14px;margin:0;color:var(--muted);font-size:12px;line-height:1.5}.event-preview-glyph{display:grid;place-items:center;flex-shrink:0;width:46px;height:46px;border:3px solid;border-radius:50%;background:#25283d;font-size:22px}.event-preview-close{display:grid;place-items:center;align-self:flex-start;padding:5px;border:0;background:transparent;color:var(--muted)}.event-map-preview h2{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.event-empty strong{font-size:13px}.event-empty p,.event-details p,.frames-gallery p{color:var(--muted);font-size:12px;line-height:1.65}.event-empty a{display:inline-flex;align-items:center;gap:6px;color:var(--coral);font-size:12px;font-weight:800;text-decoration:none}.event-description{white-space:pre-wrap;overflow-wrap:anywhere}.event-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.event-attended{color:#65cfb0!important}.event-refresh{display:inline-flex;gap:5px;align-items:center;background:none;border:0;color:var(--lavender);font:inherit}.empathy-total{font-size:26px;color:var(--coral)}.frames-gallery h2{font-size:18px;margin-top:24px}.frames-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 12px;margin:24px 0}.frames-grid>div{display:grid;gap:8px;text-align:center;justify-items:center}.frames-grid span{display:grid;place-items:center;width:54px;height:54px;border:5px solid;border-radius:50%;background:var(--surface-soft);font-size:24px}.frames-grid strong{font-size:12px}.frames-grid small{font-size:11px;color:var(--muted)}.frame-locked{opacity:.55}
+.community-events-explorer{margin:0;max-width:none}
+.event-category-chips { column-gap: 6px; }
+.event-category-chips button { min-height: 44px; padding-inline: 7px; white-space: nowrap; cursor: pointer; }
+.map-zone-button{cursor:pointer;font-family:inherit}.map-feedback{padding:8px 14px;margin:0;color:var(--muted);font-size:12px;line-height:1.5}.event-preview-glyph{display:grid;place-items:center;flex-shrink:0;width:46px;height:46px;border:3px solid;border-radius:50%;background:#25283d;font-size:22px}.event-preview-close{display:grid;place-items:center;align-self:flex-start;padding:5px;border:0;background:transparent;color:var(--muted)}.event-map-preview h2{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.event-empty strong{font-size:13px}.event-empty p,.event-details p,.frames-gallery p{color:var(--muted);font-size:12px;line-height:1.65}.event-empty a{display:inline-flex;align-items:center;gap:6px;color:var(--coral);font-size:12px;font-weight:800;text-decoration:none}.event-description{white-space:pre-wrap;overflow-wrap:anywhere}.event-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}.event-attended{color:#65cfb0!important}.event-refresh{display:inline-flex;gap:5px;align-items:center;background:none;border:0;color:var(--lavender);font:inherit}.empathy-total{font-size:26px;color:var(--coral)}.frames-gallery h2{font-size:18px;margin-top:24px}.frames-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:20px 12px;margin:24px 0}.frames-grid>div{display:grid;gap:8px;text-align:center;justify-items:center}.frames-grid span{display:grid;place-items:center;width:54px;height:54px;border:5px solid;border-radius:50%;background:var(--surface-soft);font-size:24px}.frames-grid strong{font-size:12px}.frames-grid small{font-size:11px;color:var(--muted)}.frame-locked{opacity:.55}
 </style>

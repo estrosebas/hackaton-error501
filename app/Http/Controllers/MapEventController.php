@@ -34,7 +34,12 @@ class MapEventController extends Controller
             'category' => $event->category, 'type' => $event->type, 'place' => $event->place, 'starts_at' => $event->starts_at->toIso8601String(),
             'ends_at' => $event->ends_at->toIso8601String(), 'latitude' => (float) $event->latitude, 'longitude' => (float) $event->longitude,
             'has_cost' => $event->has_cost, 'points' => $event->points, 'frame' => $event->frame,
-            'has_photo' => (bool) $event->photo_path, 'author' => ['id' => $event->user_id, 'name' => $event->author->name],
+            'has_photo' => (bool) $event->photo_path,
+            'author' => [
+                'id' => $event->user_id, 'name' => $event->author->name,
+                'avatar' => $event->author->demoAvatarUrl(),
+                'has_community_avatar' => filled($event->author->community_avatar_path),
+            ],
             'is_owner' => $event->user_id === $viewer, 'cancelled' => (bool) $event->cancelled_at,
             'joined' => (bool) $attendance, 'attended' => (bool) $attendance?->processed_at,
             'participants' => $participants ?? DB::table('map_event_attendances')->where('map_event_id', $event->id)->count(),
@@ -43,7 +48,8 @@ class MapEventController extends Controller
 
     private function located()
     {
-        return MapEvent::select('map_events.*')->selectRaw('ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude')->with('author:id,name');
+        return MapEvent::select('map_events.*')->selectRaw('ST_Y(location::geometry) AS latitude, ST_X(location::geometry) AS longitude')
+            ->with('author:id,name,community_avatar_path,demo_key,demo_avatar');
     }
 
     public function catalog(Request $request)

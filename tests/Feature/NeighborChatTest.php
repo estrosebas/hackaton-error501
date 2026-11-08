@@ -6,6 +6,7 @@ use App\Models\ChatRoom;
 use App\Models\CommunityPost;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -29,6 +30,25 @@ class NeighborChatTest extends TestCase
             ->assertJsonMissingPath('data.dni')->assertJsonMissingPath('data.email')->assertJsonMissingPath('data.latitude')->assertJsonMissingPath('data.face_profile');
         $this->getJson('/api/v1/neighbors/'.$outsider->id)->assertNotFound();
         $this->getJson('/api/v1/neighbors')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_map_neighbors_only_include_visible_profiles_from_the_same_neighborhood(): void
+    {
+        $actor = $this->neighbor();
+        $actor->update(['neighborhood' => 'Álamos del barrio']);
+        $nearby = $this->neighbor();
+        $nearby->forceFill(['neighborhood' => ' Álamos DEL BARRIO ', 'latitude' => -12.04, 'longitude' => -77.03, 'community_avatar_path' => 'community/shared.webp'])->save();
+        $blocked = $this->neighbor();
+        $blocked->update(['neighborhood' => $actor->neighborhood]);
+        DB::table('neighbor_blocks')->insert(['user_id' => $blocked->id, 'blocked_user_id' => $actor->id]);
+        $this->neighbor();
+        $this->neighbor('080101')->update(['neighborhood' => $actor->neighborhood]);
+
+        Sanctum::actingAs($actor);
+        $this->getJson('/api/v1/neighbors?nearby=1')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $nearby->id)->assertJsonPath('data.0.has_community_avatar', true)
+            ->assertJsonMissingPath('data.0.latitude')->assertJsonMissingPath('data.0.longitude')
+            ->assertJsonMissingPath('data.0.community_avatar_path')->assertJsonMissingPath('data.0.email');
     }
 
     public function test_direct_room_is_unique_and_private_and_has_read_tracking(): void
