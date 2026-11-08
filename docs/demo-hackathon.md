@@ -14,7 +14,7 @@ php artisan optimize
 
 Crea 20 perfiles sintéticos, 72 publicaciones, 144 comentarios iniciales y 12 eventos (tres por categoría) en el distrito de esa cuenta. Los eventos se colocan a 80–245 metros de sus coordenadas guardadas. Los horarios se fijan al sembrar; una segunda ejecución conserva los eventos existentes, sus inscripciones, cancelaciones y comentarios reales. No reinicia los horarios ni duplica registros.
 
-Las cuentas sintéticas no tienen DNI ni credenciales de acceso conocidas. No se crean embeddings, inscripciones, puntos ni vistos buenos ficticios. Cada registro lleva una `demo_key` con prefijo `showcase-{ubigeo}-`; el feed muestra una marca de demostración y las emergencias del mapa son simulacros explícitos.
+Las cuentas sintéticas no tienen DNI ni credenciales de acceso conocidas. La siembra base no crea embeddings, inscripciones ni puntos. Cada registro conserva una `demo_key` con prefijo `showcase-{ubigeo}-` para su trazabilidad interna. El feed y los nombres de lugar omiten los rótulos repetitivos de demostración; las descripciones de los simulacros mantienen su identificación explícita.
 
 Se verifican los hashes de los retratos sintéticos y las fotos antes de sembrar. Se usan los recursos de `database/data/demo/events/`, o los de `database/data/demo/showcase-photos/` cuando existe su manifiesto. Las fotografías compartidas se recodifican como WebP y se sirven por los endpoints del feed y del mapa, con las restricciones existentes. Los retratos sintéticos públicos usan una URL absoluta del backend para funcionar con dominios separados; esta exposición requiere la activación explícita de la demo.
 

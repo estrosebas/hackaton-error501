@@ -31,7 +31,9 @@ class MapEventController extends Controller
 
         return [
             'id' => $event->id, 'title' => $event->title, 'description' => $event->description,
-            'category' => $event->category, 'type' => $event->type, 'place' => $event->place, 'starts_at' => $event->starts_at->toIso8601String(),
+            'category' => $event->category, 'type' => $event->type,
+            'place' => $event->demo_key ? preg_replace('/^(?:DEMO|Encuentro de demostración)\s*·\s*/u', '', $event->place) : $event->place,
+            'starts_at' => $event->starts_at->toIso8601String(),
             'ends_at' => $event->ends_at->toIso8601String(), 'latitude' => (float) $event->latitude, 'longitude' => (float) $event->longitude,
             'has_cost' => $event->has_cost, 'points' => $event->points, 'frame' => $event->frame,
             'has_photo' => (bool) $event->photo_path,
