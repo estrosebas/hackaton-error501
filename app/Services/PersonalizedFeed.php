@@ -16,7 +16,7 @@ class PersonalizedFeed
     public function paginate(Builder $query, User $viewer, ?string $cursor, bool $personalize): array
     {
         $interests = $viewer->feed_interests ?? [];
-        if (! $personalize || ! $interests) {
+        if (! $personalize) {
             $page = $query->orderByDesc('id')->cursorPaginate(10);
 
             return [$page->getCollection(), $page->nextCursor()?->encode()];
@@ -45,8 +45,13 @@ class PersonalizedFeed
         $body = $normalize('community_posts.body');
         $pattern = '(^|[^a-z0-9_])('.implode('|', array_map(fn ($a) => preg_quote($a, '/'), $aliases)).')([^a-z0-9_]|$)';
         $cutoff = Carbon::createFromTimestamp($state['a'])->subDays(config('feed-interests.recent_days'))->toDateTimeString();
-        $score = "CASE WHEN community_posts.created_at >= ? AND community_posts.kind = 'emergency' THEN 2 WHEN community_posts.created_at >= ? AND (EXISTS (SELECT 1 FROM taggables JOIN tags ON tags.id = taggables.tag_id WHERE taggables.taggable_id = community_posts.id AND taggables.taggable_type = ? AND tags.type IN ('feed_topic','category','hashtag') AND $tagName IN ($placeholders)) OR $body ~ ?) THEN 1 ELSE 0 END";
-        $bindings = [$cutoff, $cutoff, (new CommunityPost)->getMorphClass(), ...$aliases, $pattern];
+        if ($aliases) {
+            $score = "CASE WHEN community_posts.created_at >= ? AND community_posts.kind = 'emergency' THEN 2 WHEN community_posts.created_at >= ? AND (EXISTS (SELECT 1 FROM taggables JOIN tags ON tags.id = taggables.tag_id WHERE taggables.taggable_id = community_posts.id AND taggables.taggable_type = ? AND tags.type IN ('feed_topic','category','hashtag') AND $tagName IN ($placeholders)) OR $body ~ ?) THEN 1 ELSE 0 END";
+            $bindings = [$cutoff, $cutoff, (new CommunityPost)->getMorphClass(), ...$aliases, $pattern];
+        } else {
+            $score = "CASE WHEN community_posts.created_at >= ? AND community_posts.kind = 'emergency' THEN 2 ELSE 0 END";
+            $bindings = [$cutoff];
+        }
         $query->where('community_posts.id', '<=', $state['m']);
         if ($cursor) {
             $query->where(function ($q) use ($score, $bindings, $state) {

@@ -4,7 +4,6 @@ import AppIcon from '../AppIcon.vue'
 import AppSelect from '../AppSelect.vue'
 import { currentUser } from '../../composables/useAuth'
 import NeighborPost from './NeighborPost.vue'
-import ActivityRail from './ActivityRail.vue'
 import MapEventRail from '../events/MapEventRail.vue'
 import { NModal, NCard, NButton, useMessage } from 'naive-ui'
 import {
@@ -20,6 +19,7 @@ const {
   addComment,
   toggleSave,
   loading,
+  hasLoaded,
   error,
   kind,
   savedOnly, searchText, categoryFilter,
@@ -30,7 +30,6 @@ const {
   commentCursors,
   resolve,
   remove,
-  activities,
   loadActivities,
   toggleCommentLike,
   retryMore,
@@ -74,14 +73,8 @@ const categorySuggestions=computed(()=>[...new Set(posts.value.flatMap(post=>pos
 function searchFeed(){if(loading.value)return;searchText.value=draftSearch.value;categoryFilter.value=draftCategory.value;refresh()}
 const kindOptions = [{ label: 'Todas', value: '' }, ...postKinds]
 const timeline = computed(() => {
-  const activityIds = new Set(activities.value.map((activity) => activity.id))
   const items: { key: string; post?: Post }[] = posts.value
-    .filter((post) => filtered.value || !activityIds.has(post.id))
     .map((post) => ({ key: post.id, post }))
-  if (!filtered.value) {
-    const insertAt = posts.value[0]?.kind === 'activity' ? 0 : 1
-    items.splice(insertAt, 0, { key: 'activity-rail' })
-  }
   return items
 })
 
@@ -126,7 +119,7 @@ async function confirmDelete() {
 
 <template>
   <section class="feed-posts" aria-labelledby="feed-posts-title">
-    <MapEventRail v-if="!filtered" />
+    <MapEventRail v-if="!filtered" @select-activity="emit('selectActivity', $event)" @open-agenda="emit('openActivities')" />
     <NModal :show="deletingId !== null" :mask-closable="!deleting" @update:show="value => { if (!value && !deleting) deletingId = null }">
       <NCard title="¿Retirar esta publicación?" role="dialog" aria-modal="true" aria-label="Retirar publicación" style="width:min(92vw,420px)">
         Dejará de aparecer en el feed de tus vecinos.
@@ -174,10 +167,10 @@ async function confirmDelete() {
         Reintentar
       </button>
     </div>
-    <p v-if="loading && !posts.length" class="feed-state" role="status">
+    <p v-if="(!hasLoaded || loading) && !posts.length" class="feed-state" role="status">
       Cargando publicaciones…
     </p>
-    <div v-else-if="!posts.length && !error" class="feed-state">
+    <div v-else-if="hasLoaded && !posts.length && !error" class="feed-state">
       <strong>{{
         filtered
           ? 'Sin publicaciones para este filtro'
@@ -205,11 +198,6 @@ async function confirmDelete() {
           @resolve="resolve"
           @remove="deletePost"
           @comment-like="toggleCommentLike"
-        />
-        <ActivityRail
-          v-else
-          @select="emit('selectActivity', $event)"
-          @open-agenda="emit('openActivities')"
         />
       </template>
       <div ref="sentinel" class="feed-scroll-state" role="status">

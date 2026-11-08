@@ -1,5 +1,7 @@
 # Demostración pública de la hackathon
 
+`php artisan db:seed --class=HackathonPolishSeeder --force` aplica el refinamiento visual: 73 posts incluyendo un simulacro concluido en rojo, likes y comentarios sintéticos de cantidades diferentes, horarios y distancias irregulares y dos actividades con horarios y fotos distintos. Conserva likes/comentarios reales y no cambia horario o ubicación de eventos que ya tienen inscritos. Los vistos buenos de ejemplo se generan exclusivamente entre los perfiles sintéticos, sin atribuir recomendaciones ni puntos a cuentas reales. La ejecución es repetible; no cambia `APP_ENV`.
+
 Para mostrar cambios al ampliar el radio, ejecutar además `php artisan db:seed --class=HackathonMapRangeSeeder --force`. Conserva los 12 eventos base y añade otros 24, a 400, 650, 900, 1250, 1800 y 2600 metros. Respecto a la ubicación guardada de la cuenta ancla, habrá 12 eventos dentro de 300 m, 24 dentro de 1 km y 36 al elegir Todo mi distrito. Una ubicación GPS distinta puede producir otros recuentos. La ampliación también es idempotente y respeta eventos ya modificados.
 
 `HackathonDemoSeeder` es una siembra manual independiente de los seeders locales. Solo funciona con `DEMO_SHOWCASE_ENABLED=true` y requiere `DEMO_MAP_ANCHOR_USER_ID` de una cuenta real con UBIGEO y coordenadas guardadas. No cambiar `APP_ENV` a local para usarla.

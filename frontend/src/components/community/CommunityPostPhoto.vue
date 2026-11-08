@@ -11,10 +11,13 @@ const props = defineProps<{
 const photo = useTemplateRef<HTMLElement>('post-photo')
 const url = shallowRef('')
 const failed = shallowRef(false)
+const loading = shallowRef(false)
 const request = new AbortController()
 let observer: IntersectionObserver | undefined
 
 async function load() {
+  if (loading.value || request.signal.aborted) return
+  loading.value = true
   if (url.value) {
     URL.revokeObjectURL(url.value)
     url.value = ''
@@ -26,6 +29,8 @@ async function load() {
     if (!request.signal.aborted) url.value = URL.createObjectURL(image)
   } catch {
     if (!request.signal.aborted) failed.value = true
+  } finally {
+    loading.value = false
   }
 }
 
@@ -62,7 +67,8 @@ onScopeDispose(() => {
       <AppIcon name="calendar" :size="30" />
     </div>
     <div v-else-if="!url || failed" class="photo-state">
-      <p>{{ failed ? 'No pudimos cargar la foto.' : 'Cargando foto…' }}</p>
+      <p v-if="failed || loading" :role="loading ? 'status' : undefined">{{ failed ? 'No pudimos cargar la foto.' : 'Cargando foto…' }}</p>
+      <AppIcon v-else name="camera" :size="26" aria-label="Foto de la publicación" />
       <button v-if="failed" class="text-link" type="button" @click="load">Reintentar</button>
     </div>
   </figure>

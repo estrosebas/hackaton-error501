@@ -11,11 +11,10 @@ import AppIcon from '../AppIcon.vue'
 import CurrentUserAvatar from '../auth/CurrentUserAvatar.vue'
 import PostPhotoGallery from './PostPhotoGallery.vue'
 import ActivityDetails from './ActivityDetails.vue'
-import ActivitiesAgenda from './ActivitiesAgenda.vue'
 import MapEventRail from '../events/MapEventRail.vue'
 import CommunityNotificationCenter from './CommunityNotificationCenter.vue'
 import NeighborProfileDetails from '../neighbors/NeighborProfileDetails.vue'
-import { useCommunity, type Post } from '../../composables/useCommunity'
+import type { Post } from '../../composables/useCommunity'
 
 export type Panel =
   | 'messages'
@@ -34,7 +33,6 @@ const emit = defineEmits<{
   open: [panel: Panel]
   selectActivity: [id: string]
 }>()
-const { activities, activitiesLoading, activitiesError, loadActivities } = useCommunity()
 const neighborhoodOptions = computed(() => [
   currentUser.value?.neighborhood || 'Tu comunidad',
 ])
@@ -110,15 +108,7 @@ function selectNeighborhood(neighborhood: string) {
         />
       </div>
       <div v-else-if="panel === 'activities'">
-      <MapEventRail agenda />
-      <ActivitiesAgenda
-        v-if="activities.length || activitiesLoading || activitiesError"
-        :activities="activities"
-        :loading="activitiesLoading"
-        :failed="activitiesError"
-        @select="emit('selectActivity', $event)"
-        @retry="loadActivities"
-      />
+      <MapEventRail agenda @select-activity="emit('selectActivity', $event)" />
       </div>
       <div v-else-if="panel === 'activity'">
         <div v-if="selectedActivity" class="activity-detail">

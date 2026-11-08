@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { apiImage } from '../../services/api'
 
-const props = defineProps<{ eventId: number; title: string }>()
+const props = defineProps<{ eventId: number; title: string; lazy?: boolean }>()
+const photo = useTemplateRef<HTMLElement>('photo')
+let observer: IntersectionObserver | undefined
 const url = ref(''), failed = ref(false), loading = ref(false)
 const controller = new AbortController()
 
@@ -21,18 +23,23 @@ async function load() {
     loading.value = false
   }
 }
-onMounted(() => { void load() })
+onMounted(() => {
+  if(!props.lazy || !photo.value || typeof IntersectionObserver==='undefined'){void load();return}
+  observer=new IntersectionObserver(([entry])=>{if(entry?.isIntersecting){observer?.disconnect();void load()}},{rootMargin:'180px'})
+  observer.observe(photo.value)
+})
 onBeforeUnmount(() => {
   controller.abort()
+  observer?.disconnect()
   if (url.value) URL.revokeObjectURL(url.value)
 })
 </script>
 
 <template>
-  <figure class="event-detail-photo">
+  <figure ref="photo" class="event-detail-photo">
     <img v-if="url && !failed" :src="url" :alt="`Foto del evento: ${title}`" decoding="async" @error="failed = true" />
     <figcaption v-else class="event-photo-state" role="status">
-      {{ failed ? 'No pudimos cargar la foto del evento.' : 'Cargando foto del evento…' }}
+      {{ failed ? 'No pudimos cargar la foto del evento.' : loading ? 'Cargando foto del evento…' : 'Foto del evento' }}
       <button v-if="failed" type="button" class="text-link" @click="load">Reintentar</button>
     </figcaption>
   </figure>

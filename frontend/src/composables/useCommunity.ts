@@ -4,7 +4,7 @@ import {
   ref,
   shallowRef,
   type InjectionKey,
-  onMounted,
+  onScopeDispose,
   watch,
 } from 'vue'
 import { api } from '../services/api'
@@ -85,7 +85,8 @@ function createCommunity() {
   const activitiesLoading = ref(true)
   const activitiesError = ref(false)
   let activityGeneration = 0
-  const loading = ref(false),
+  const hasLoaded = ref(false)
+  const loading = ref(true),
     error = ref(''),
     kind = ref(''),
     savedOnly = ref(false)
@@ -94,16 +95,21 @@ function createCommunity() {
   const retryMore = ref(false)
   const pending = new Set<string>()
   let generation = 0
+  let postsRequest: AbortController | undefined
+  let activitiesRequest: AbortController | undefined
   function fail(e: unknown) {
     error.value =
       e instanceof Error ? e.message : 'No pudimos completar la solicitud.'
   }
   async function loadActivities() {
     const current = ++activityGeneration
+    activitiesRequest?.abort()
+    const request = new AbortController()
+    activitiesRequest = request
     activitiesLoading.value = true
     activitiesError.value = false
     try {
-      const response = await api<{ data: Post[] }>('/feed?kind=activity')
+      const response = await api<{ data: Post[] }>('/feed?kind=activity', { signal: request.signal, cache: 'no-store' })
       if (current === activityGeneration) activities.value = response.data
     } catch {
       if (current === activityGeneration) activitiesError.value = true
@@ -114,6 +120,9 @@ function createCommunity() {
   async function loadPosts(more = false) {
     if (more && (loading.value || !nextCursor.value)) return
     const current = ++generation
+    postsRequest?.abort()
+    const request = new AbortController()
+    postsRequest = request
     retryMore.value = more
     loading.value = true
     error.value = ''
@@ -127,7 +136,7 @@ function createCommunity() {
       const response = await api<{
         data: Post[]
         next_cursor: string | null
-      }>(`/feed?${query}`)
+      }>(`/feed?${query}`, { signal: request.signal, cache: 'no-store' })
       if (current !== generation) return
       posts.value = more
         ? [
@@ -141,7 +150,7 @@ function createCommunity() {
     } catch (e) {
       if (current === generation) fail(e)
     } finally {
-      if (current === generation) loading.value = false
+      if (current === generation) { loading.value = false; hasLoaded.value = true }
     }
   }
   async function loadComments(id: string) {
@@ -317,16 +326,16 @@ function createCommunity() {
       pending.delete(key)
     }
   }
-  onMounted(() => {
+  watch([() => currentUser.value?.id, () => currentUser.value?.ubigeo, () => JSON.stringify(currentUser.value?.feed_interests ?? [])], ([id, ubigeo]) => {
+    generation++; activityGeneration++
+    postsRequest?.abort(); activitiesRequest?.abort()
+    neighborhood.value = currentUser.value?.neighborhood || 'Tu comunidad'
+    posts.value = []; activities.value = []; nextCursor.value = null; hasLoaded.value = false
+    if (!id || !ubigeo) { loading.value = false; activitiesLoading.value = false; return }
     void loadPosts()
     void loadActivities()
-  })
-  watch([() => currentUser.value?.ubigeo, () => JSON.stringify(currentUser.value?.feed_interests ?? [])], (_next, previous) => {
-    neighborhood.value = currentUser.value?.neighborhood || 'Tu comunidad'
-    posts.value = []; nextCursor.value = null
-    void loadPosts()
-    if (_next[0] !== previous[0]) void loadActivities()
-  })
+  }, { immediate: true })
+  onScopeDispose(() => { generation++; activityGeneration++; postsRequest?.abort(); activitiesRequest?.abort() })
   watch(() => currentUser.value?.neighborhood, value => { neighborhood.value = value || 'Tu comunidad' })
   return {
     neighborhood,
@@ -336,6 +345,7 @@ function createCommunity() {
     activitiesError,
     loadActivities,
     loading,
+    hasLoaded,
     error,
     kind,
     savedOnly, searchText, categoryFilter,
