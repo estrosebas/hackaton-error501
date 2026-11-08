@@ -30,11 +30,11 @@ function render(){
     if(event.has_photo){
       void photoUrl(event.id).then(url=>{if(!url||version!==generation||scope.signal.aborted)return;const image=document.createElement('img');image.src=url;image.alt='';element.replaceChildren(image)})
     }
-    const badge=document.createElement('div');badge.className='event-map-badge'
-    const label=document.createElement('span');label.className='neighbor-pin-name event-pin-title';label.textContent=event.title;badge.append(element,label)
+    const badge=document.createElement('div');badge.className=event.category==='emergency'?'event-map-badge event-map-badge--emergency':'event-map-badge'
+    const label=document.createElement('span');label.className='neighbor-pin-name event-pin-title';label.textContent=(event.category==='emergency'?'🚨 ':'')+event.title;badge.append(element,label)
     const marker=L.marker([event.latitude,event.longitude],{icon:L.divIcon({html:badge,className:'event-map-pin',iconSize:[62,74],iconAnchor:[31,26]}),title:`${event.title} · ${category?.label}`,keyboard:true}).addTo(layer)
     marker.on('click',()=>emit('select',event.id));marker.getElement()?.setAttribute('aria-label',`Ver evento: ${event.title}`)
-    if(event.id===props.selected)marker.setZIndexOffset(1000)
+    marker.setZIndexOffset(event.id===props.selected?1000:event.category==='emergency'?500:0)
   }
 }
 onMounted(()=>{
@@ -54,5 +54,30 @@ onBeforeUnmount(()=>{generation++;scope.abort();observer?.disconnect();map?.remo
 </script>
 <template><div class="event-map-wrap" :class="{'event-map-fill':fill}"><div ref="canvas" class="event-map-canvas" role="region" :aria-label="pick?'Selecciona la ubicación del evento en el mapa':'Mapa comunitario de eventos'"/><div class="event-map-controls" aria-label="Controles del mapa"><NButton circle aria-label="Ampliar mapa" @click="map?.zoomIn()"><AppIcon name="plus" :size="20"/></NButton><NButton circle aria-label="Reducir mapa" @click="map?.zoomOut()"><AppIcon name="minus" :size="20"/></NButton><NButton circle aria-label="Volver a mi zona" @click="map?.setView(center,16)"><AppIcon name="locate" :size="20"/></NButton></div><p v-if="pick" class="map-hint">Toca el mapa o arrastra el pin para cambiar el lugar.</p><p v-if="tileError" class="map-hint map-tile-error">No se cargaron algunas calles. Puedes usar la lista de eventos.</p></div></template>
 <style>
-.event-map-wrap{position:relative;isolation:isolate}.event-map-canvas{height:400px;min-height:280px;border:1px solid var(--line);border-radius:20px;background:#181d2e;z-index:0;font-family:var(--font)}.event-map-badge{display:flex;flex-direction:column;align-items:center;gap:3px}.event-pin-title{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 6px;border-radius:5px;color:#f4f0ff;background:#15182be8;font-size:10px;font-weight:900;line-height:1.5}.event-map-face{width:52px;height:52px;border:4px solid;border-radius:50%;background:#1d2137;display:grid;place-items:center;box-shadow:0 3px 14px #0008;overflow:hidden}.event-map-face span{font-size:25px}.event-map-face img{width:100%;height:100%;object-fit:cover}.event-map-pin:focus-visible .event-map-badge{display:flex;flex-direction:column;align-items:center;gap:3px}.event-pin-title{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 6px;border-radius:5px;color:#f4f0ff;background:#15182be8;font-size:10px;font-weight:900;line-height:1.5}.event-map-face{box-shadow:0 0 0 4px #fff}.event-location-dot{font-size:34px}.map-hint{font-size:.75rem;color:var(--muted);line-height:1.6}.event-map-canvas .leaflet-tile-pane{filter:invert(1) hue-rotate(178deg) saturate(.48) brightness(.78) contrast(.94)}.event-map-canvas .leaflet-control-attribution{padding:2px 6px;color:#d0cbe6;background:#15182be8;font-size:10px}.event-map-canvas .leaflet-control-attribution a{color:#dfd3fa}.event-map-controls{position:absolute;top:49px;right:11px;z-index:850;display:grid;gap:7px}.event-map-controls .n-button{width:44px;height:44px;color:var(--text);background:#1e233be8}.event-map-controls .n-button:last-child{margin-top:5px;color:var(--coral)}.event-origin-label{padding:2px 6px;border:0;border-radius:5px;color:#eee9ff;background:#24213ae8;font-size:10px;font-weight:900;box-shadow:none}.event-origin-label:before{display:none}.event-map-fill{position:absolute;inset:0}.event-map-fill .event-map-canvas{height:100%;min-height:0;border:0;border-radius:0}.map-tile-error{position:absolute;z-index:850;top:45px;left:12px;right:68px;width:fit-content;max-width:calc(100% - 80px);padding:8px 11px;background:#1f243be8;border-radius:9px;font-size:11px}@media(min-width:760px){.event-map-canvas{height:500px}}@media(max-height:760px){.event-map-fill{position:relative;height:clamp(275px,45dvh,345px)}}
+.event-map-wrap{position:relative;isolation:isolate}
+.event-map-canvas{height:400px;min-height:280px;border:1px solid var(--line);border-radius:20px;background:#181d2e;z-index:0;font-family:var(--font)}
+.event-map-badge{display:flex;flex-direction:column;align-items:center;gap:3px}
+.event-pin-title{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 6px;border-radius:5px;color:#f4f0ff;background:#15182be8;font-size:10px;font-weight:900;line-height:1.5}
+.event-map-face{width:52px;height:52px;border:4px solid;border-radius:50%;background:#1d2137;display:grid;place-items:center;box-shadow:0 3px 14px #0008;overflow:hidden}
+.event-map-face span{font-size:25px}
+.event-map-face img{width:100%;height:100%;object-fit:cover}
+.event-map-pin:focus-visible .event-map-face{box-shadow:0 0 0 4px #fff}
+.event-map-badge--emergency .event-map-face{border-color:#ff617e!important;border-width:5px;box-shadow:0 0 0 5px #ff617e45,0 0 20px #ff617e60,0 4px 12px #0009}
+.event-map-badge--emergency .event-pin-title{color:#fff0f3;background:#932a45;border:1px solid #ff617e}
+.event-map-pin:focus-visible .event-map-badge--emergency .event-map-face{box-shadow:0 0 0 3px #fff,0 0 0 7px #ff617e80}
+.event-location-dot{font-size:34px}
+.map-hint{font-size:.75rem;color:var(--muted);line-height:1.6}
+.event-map-canvas .leaflet-tile-pane{filter:invert(1) hue-rotate(178deg) saturate(.48) brightness(.78) contrast(.94)}
+.event-map-canvas .leaflet-control-attribution{padding:2px 6px;color:#d0cbe6;background:#15182be8;font-size:10px}
+.event-map-canvas .leaflet-control-attribution a{color:#dfd3fa}
+.event-map-controls{position:absolute;top:49px;right:11px;z-index:850;display:grid;gap:7px}
+.event-map-controls .n-button{width:44px;height:44px;color:var(--text);background:#1e233be8}
+.event-map-controls .n-button:last-child{margin-top:5px;color:var(--coral)}
+.event-origin-label{padding:2px 6px;border:0;border-radius:5px;color:#eee9ff;background:#24213ae8;font-size:10px;font-weight:900;box-shadow:none}
+.event-origin-label:before{display:none}
+.event-map-fill{position:absolute;inset:0}
+.event-map-fill .event-map-canvas{height:100%;min-height:0;border:0;border-radius:0}
+.map-tile-error{position:absolute;z-index:850;top:45px;left:12px;right:68px;width:fit-content;max-width:calc(100% - 80px);padding:8px 11px;background:#1f243be8;border-radius:9px;font-size:11px}
+@media(min-width:760px){.event-map-canvas{height:500px}}
+@media(max-height:760px){.event-map-fill{position:relative;height:clamp(275px,45dvh,345px)}}
 </style>

@@ -39,6 +39,12 @@ La lista respeta bloqueos en ambos sentidos. No devuelve DNI, correo, embeddings
 
 ## Entorno local
 
+`LocalMapEventsSeeder` crea 12 eventos de demostración (tres por categoría) con vecinos sintéticos y fotos ilustrativas de espacios/actividades, a 65–475 m de una ubicación guardada. Se ejecuta después de `LocalCommunitySeeder`, exclusivamente con `APP_ENV=local` y la demo habilitada. Usa `DEMO_MAP_ANCHOR_USER_ID` si se indica; de lo contrario toma la cuenta real con la captura de ubicación más reciente (y la más nueva si no hay fecha). Sin cuenta con distrito y coordenadas no inventa una ubicación. Así cada desarrollador registra su propia cuenta y los eventos aparecen cerca de ella al ejecutar el seeder o volver a arrancar.
+
+Las fotos están en `database/data/demo/events`, con origen, autor y SHA256 en `manifest.json`; no hay descargas durante el seed. Se validan y recodifican a WebP en almacenamiento privado, sin usar fotos de perfil ni biométricas. Son ilustrativas: no representan los sitios reales de las coordenadas. Ver [créditos](../database/data/demo/events/README.md). `scripts/download-demo-event-photos.ps1` permite recuperar los archivos originales comprobando sus hashes.
+
+Las emergencias son simulacros explícitos. Repetir el seed no duplica eventos ni acredita puntos. Los eventos con inscripciones conservan sus ubicaciones, horarios y detalles; solo se actualiza su imagen demo anterior si era un retrato. El almacenamiento reutiliza las ilustraciones por hash. Para cargarlo manualmente: `php artisan db:seed --class=LocalMapEventsSeeder`.
+
 `scripts/setup-postgis.ps1` instala PostGIS 3.6.2 para PostgreSQL 17 desde OSGeo, verifica SHA256 y habilita la extensión en vecino y vecino_test usando el administrador local. No cambia APP_KEY ni contraseñas. Conserva las DLL existentes de PostgreSQL. `setup-local.ps1` y `start-local.ps1` lo incluyen antes de migrar. El usuario de la app no necesita privilegios de superusuario.
 
 Las conexiones PostgreSQL usan UTC; el navegador convierte horarios locales a ISO 8601 con zona. En otro entorno, un administrador debe instalar PostGIS y ejecutar `CREATE EXTENSION IF NOT EXISTS postgis` antes de las migraciones.

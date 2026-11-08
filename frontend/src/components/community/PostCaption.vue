@@ -13,7 +13,7 @@ const kind = computed(() => postKinds.find(item => item.value === props.post.kin
     <div v-if="kind || post.status === 'resolved'" class="post-labels">
       <span v-if="post.recommended" class="post-kind">♡ Para ti</span>
       <span v-if="post.trending" class="post-kind">↗ En tendencia en tu distrito</span>
-      <span v-if="kind" class="post-kind">{{ kind }}</span>
+      <span v-if="kind" class="post-kind" :class="{'post-kind--emergency':post.kind==='emergency'}">{{ kind }}</span>
       <span v-if="post.status === 'resolved'" class="post-resolved">
         <AppIcon name="check" :size="14" />
         {{ post.kind === 'activity' ? 'Finalizada' : 'Atendida' }}
@@ -62,6 +62,9 @@ const kind = computed(() => postKinds.find(item => item.value === props.post.kin
 }
 .post-resolved {
   color: var(--muted);
+}
+.post-kind--emergency {
+  color: #ff9cb0;
 }
 .post-caption p {
   margin: 0;

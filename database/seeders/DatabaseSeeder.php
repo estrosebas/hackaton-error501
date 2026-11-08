@@ -17,5 +17,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call([UbigeoSeeder::class, AccessSeeder::class]);
         $this->call(LocalCommunitySeeder::class);
+        $this->call(LocalMapEventsSeeder::class);
     }
 }

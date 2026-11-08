@@ -103,6 +103,18 @@ No pegar credenciales reales en esta guía, en archivos de ejemplo ni en commits
 
 `APP_ENV=local` habilita los datos sintéticos cuando está activa su configuración. No cambiar a `production` para desarrollar. Los seeders no sustituyen la configuración de Scrall necesaria para registrar personas nuevas.
 
+### Eventos de prueba cerca del desarrollador
+
+Registrar una cuenta con distrito y permiso de ubicación. Después, reiniciar el entorno o ejecutar:
+
+```powershell
+php artisan db:seed --class=LocalMapEventsSeeder
+```
+
+Se crean tres eventos de cada categoría (12 en total), a 65–475 metros de la ubicación guardada de la cuenta con captura GPS más reciente. Las fotos ilustran lugares y actividades y ya vienen en el repositorio; no usan retratos de los vecinos ni necesitan descargarse al arrancar. Las emergencias se identifican como simulacros.
+
+Si hay varias cuentas locales, se puede elegir cuál centra los eventos dejando `DEMO_MAP_ANCHOR_USER_ID=ID_DE_LA_CUENTA` en `.env`, ejecutar `php artisan config:clear` y repetir el seeder. Los eventos con inscripciones no cambian de lugar ni de horario. No se reparten puntos automáticamente.
+
 Después de cambiar configuración y si Laravel tenía caché:
 
 ```powershell
