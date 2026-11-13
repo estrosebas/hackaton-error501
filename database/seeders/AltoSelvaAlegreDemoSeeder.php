@@ -61,7 +61,7 @@ class AltoSelvaAlegreDemoSeeder extends Seeder
                 ]);
             });
         }
-        $this->command?->info('11 actividades de Alto Selva Alegre listas en mapa y feed. Sin cambiar cuentas reales ni otorgar puntos.');
+        $this->command?->info(count($fixture['activities']).' actividades de Alto Selva Alegre listas en mapa y feed. Sin cambiar cuentas reales ni otorgar puntos.');
     }
 
     private function photo(string $key, $images, string $directory): string

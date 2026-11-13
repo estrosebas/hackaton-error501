@@ -3,7 +3,7 @@
   "boundary": "https://www.openstreetmap.org/relation/1887795",
   "retrieved_at": "2026-11-13",
   "ubigeo": "040102",
-  "description": "Coordenadas de espacios públicos consultadas en Nominatim y verificadas dentro del límite OSM de Alto Selva Alegre. Las actividades son ficticias.",
+  "description": "Espacios públicos consultados en Nominatim y puntos aproximados alrededor de una ubicación compartida por el usuario, todos verificados dentro del límite OSM de Alto Selva Alegre. Las actividades son ficticias.",
   "activities": [
     {
       "key": "198230022",
@@ -136,6 +136,110 @@
       "type": "Otro evento comunitario",
       "body": "Intercambiemos cuadernos, colores y materiales en buen estado. Actividad gratuita para compartir lo que nos sobra y aprovecharlo mejor.",
       "photo": "community-2"
+    },
+    {
+      "key": "shared-point-20261113-0",
+      "place": "Punto vecinal referencial 1 · Alto Selva Alegre",
+      "latitude": -16.3811106,
+      "longitude": -71.515077,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Ajedrez para todas las edades",
+      "category": "community",
+      "type": "Otro evento comunitario",
+      "body": "Aprendamos los movimientos básicos y compartamos partidas amistosas. Pueden venir niñas y niños con un adulto. Trae un tablero si tienes. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "chess",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
+    },
+    {
+      "key": "shared-point-20261113-1",
+      "place": "Punto vecinal referencial 2 · Alto Selva Alegre",
+      "latitude": -16.3811533,
+      "longitude": -71.5142201,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Tarde de cometas hechas a mano",
+      "category": "trend",
+      "type": "Otra tendencia",
+      "body": "Aprendamos a armar y hacer volar cometas en familia. La demostración es gratuita; quienes quieran pueden traer su propia cometa. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "kites",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
+    },
+    {
+      "key": "shared-point-20261113-2",
+      "place": "Punto vecinal referencial 3 · Alto Selva Alegre",
+      "latitude": -16.3831502,
+      "longitude": -71.5159419,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Jornada de cuidado del parque cívico",
+      "category": "community",
+      "type": "Voluntariado",
+      "body": "Recojamos residuos y conversemos sobre cómo cuidar el espacio. Trae guantes reutilizables si tienes y evita manipular objetos peligrosos. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "community-1",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
+    },
+    {
+      "key": "shared-point-20261113-3",
+      "place": "Punto vecinal referencial 4 · Alto Selva Alegre",
+      "latitude": -16.3832435,
+      "longitude": -71.5162762,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Orientación para usar el celular",
+      "category": "support",
+      "type": "Otro apoyo",
+      "body": "Aprende a ajustar el tamaño de letra, tomar fotos y enviar mensajes. Trae tu celular cargado; nadie te pedirá contraseñas. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "support-2",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
+    },
+    {
+      "key": "shared-point-20261113-4",
+      "place": "Punto vecinal referencial 5 · Alto Selva Alegre",
+      "latitude": -16.3835854,
+      "longitude": -71.5164332,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Intercambio de libros y cuentos",
+      "category": "community",
+      "type": "Otro evento comunitario",
+      "body": "Trae un libro que ya leíste y llévate otro. Tendremos un pequeño espacio de lectura acompañada para los más pequeños. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "community-2",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
+    },
+    {
+      "key": "shared-point-20261113-5",
+      "place": "Punto vecinal referencial 6 · Alto Selva Alegre",
+      "latitude": -16.3833127,
+      "longitude": -71.5171502,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Dibujo al aire libre para jóvenes",
+      "category": "trend",
+      "type": "Otra tendencia",
+      "body": "Lápices, hojas y ganas de dibujar el barrio. Compartiremos técnicas sencillas, sin necesidad de experiencia. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "trend-2",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
+    },
+    {
+      "key": "shared-point-20261113-6",
+      "place": "Punto vecinal referencial 7 · Alto Selva Alegre",
+      "latitude": -16.381331,
+      "longitude": -71.5179652,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Reparamos tu bicicleta entre vecinos",
+      "category": "support",
+      "type": "Otro apoyo",
+      "body": "Revisaremos frenos y presión de llantas para aprender mantenimiento básico. Orientación gratuita; cada dueño se lleva su bicicleta. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "support-1",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
+    },
+    {
+      "key": "shared-point-20261113-7",
+      "place": "Punto vecinal referencial 8 · Alto Selva Alegre",
+      "latitude": -16.3786823,
+      "longitude": -71.5171047,
+      "source": "https://goo.gl/maps/opDCwHD2red18ngP6",
+      "title": "Plantitas y esquejes entre vecinos",
+      "category": "community",
+      "type": "Voluntariado",
+      "body": "Intercambiemos esquejes y consejos para cuidar nuestras plantas. No hace falta comprar: trae una maceta o ganas de aprender. Ubicación aproximada para la demostración; no es una convocatoria real.",
+      "photo": "community-1",
+      "coordinate_kind": "approximate_demo_offset_from_shared_point"
     }
   ]
 }
