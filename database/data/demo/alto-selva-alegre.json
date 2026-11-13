@@ -1,0 +1,141 @@
+{
+  "attribution": "© OpenStreetMap contributors, ODbL 1.0",
+  "boundary": "https://www.openstreetmap.org/relation/1887795",
+  "retrieved_at": "2026-11-13",
+  "ubigeo": "040102",
+  "description": "Coordenadas de espacios públicos consultadas en Nominatim y verificadas dentro del límite OSM de Alto Selva Alegre. Las actividades son ficticias.",
+  "activities": [
+    {
+      "key": "198230022",
+      "place": "Parque Javier Heraud",
+      "latitude": -16.3784655,
+      "longitude": -71.5245527,
+      "source": "https://www.openstreetmap.org/way/198230022",
+      "title": "Ajedrez para todas las edades",
+      "category": "community",
+      "type": "Otro evento comunitario",
+      "body": "Aprendamos los movimientos básicos y compartamos partidas amistosas. Pueden venir niñas y niños con un adulto. Trae un tablero si tienes.",
+      "photo": "chess"
+    },
+    {
+      "key": "198402428",
+      "place": "Padre Jose Schmidpeter",
+      "latitude": -16.3756978,
+      "longitude": -71.5166671,
+      "source": "https://www.openstreetmap.org/way/198402428",
+      "title": "Plantitas y esquejes entre vecinos",
+      "category": "community",
+      "type": "Voluntariado",
+      "body": "Intercambiemos esquejes y consejos para cuidar nuestras plantas. No hace falta comprar: trae una maceta o ganas de aprender.",
+      "photo": "community-1"
+    },
+    {
+      "key": "198402929",
+      "place": "Avelino Caceres",
+      "latitude": -16.3820521,
+      "longitude": -71.5259855,
+      "source": "https://www.openstreetmap.org/way/198402929",
+      "title": "Tarde de cometas hechas a mano",
+      "category": "trend",
+      "type": "Otra tendencia",
+      "body": "Aprendamos a armar y hacer volar cometas en familia. La demostración es gratuita; quienes quieran pueden traer su propia cometa.",
+      "photo": "kites"
+    },
+    {
+      "key": "198402584",
+      "place": "Ramiro Priale",
+      "latitude": -16.3755581,
+      "longitude": -71.5195724,
+      "source": "https://www.openstreetmap.org/way/198402584",
+      "title": "Intercambio de libros y cuentos",
+      "category": "community",
+      "type": "Otro evento comunitario",
+      "body": "Trae un libro que ya leíste y llévate otro. Tendremos un pequeño espacio de lectura acompañada para los más pequeños.",
+      "photo": "community-2"
+    },
+    {
+      "key": "198402427",
+      "place": "La Juventud",
+      "latitude": -16.3738039,
+      "longitude": -71.5168615,
+      "source": "https://www.openstreetmap.org/way/198402427",
+      "title": "Dibujo al aire libre para jóvenes",
+      "category": "trend",
+      "type": "Otra tendencia",
+      "body": "Lápices, hojas y ganas de dibujar el barrio. Compartiremos técnicas sencillas, sin necesidad de experiencia.",
+      "photo": "trend-2"
+    },
+    {
+      "key": "198403286",
+      "place": "Salazar Boundy",
+      "latitude": -16.3805594,
+      "longitude": -71.5265823,
+      "source": "https://www.openstreetmap.org/way/198403286",
+      "title": "Reparamos tu bicicleta entre vecinos",
+      "category": "support",
+      "type": "Otro apoyo",
+      "body": "Revisaremos frenos y presión de llantas para aprender mantenimiento básico. Orientación gratuita; cada dueño se lleva su bicicleta.",
+      "photo": "support-1"
+    },
+    {
+      "key": "405124820",
+      "place": "Parque del Trabajador",
+      "latitude": -16.3896466,
+      "longitude": -71.5265849,
+      "source": "https://www.openstreetmap.org/way/405124820",
+      "title": "Pasitos y conversación para adultos mayores",
+      "category": "community",
+      "type": "Otro evento comunitario",
+      "body": "Un paseo tranquilo y una conversación entre vecinos. Cada participante elige su ritmo y puede venir acompañado.",
+      "photo": "community-1"
+    },
+    {
+      "key": "198401927",
+      "place": "Parque Vilcanota",
+      "latitude": -16.3861761,
+      "longitude": -71.5211171,
+      "source": "https://www.openstreetmap.org/way/198401927",
+      "title": "Orientación para usar el celular",
+      "category": "support",
+      "type": "Otro apoyo",
+      "body": "Aprende a ajustar el tamaño de letra, tomar fotos y enviar mensajes. Trae tu celular cargado; nadie te pedirá contraseñas.",
+      "photo": "support-2"
+    },
+    {
+      "key": "13122837801",
+      "place": "Complejo Deportivo Balcones de Chilina",
+      "latitude": -16.3628753,
+      "longitude": -71.526671,
+      "source": "https://www.openstreetmap.org/node/13122837801",
+      "title": "Partiditos amistosos en Balcones de Chilina",
+      "category": "trend",
+      "type": "Otra tendencia",
+      "body": "Organicemos equipos para jugar de manera recreativa. Trae agua y coordina tu participación por los comentarios.",
+      "photo": "trend-1"
+    },
+    {
+      "key": "13122786301",
+      "place": "Parque Civico Balcones de Chilina",
+      "latitude": -16.3617574,
+      "longitude": -71.5261538,
+      "source": "https://www.openstreetmap.org/node/13122786301",
+      "title": "Jornada de cuidado del parque cívico",
+      "category": "community",
+      "type": "Voluntariado",
+      "body": "Recojamos residuos y conversemos sobre cómo cuidar el espacio. Trae guantes reutilizables si tienes y evita manipular objetos peligrosos.",
+      "photo": "community-1"
+    },
+    {
+      "key": "313143651",
+      "place": "Plaza del Espiritu Santo",
+      "latitude": -16.3854326,
+      "longitude": -71.5217097,
+      "source": "https://www.openstreetmap.org/way/313143651",
+      "title": "Trueque solidario de útiles escolares",
+      "category": "community",
+      "type": "Otro evento comunitario",
+      "body": "Intercambiemos cuadernos, colores y materiales en buen estado. Actividad gratuita para compartir lo que nos sobra y aprovecharlo mejor.",
+      "photo": "community-2"
+    }
+  ]
+}
